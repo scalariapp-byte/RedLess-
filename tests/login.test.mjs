@@ -26,7 +26,7 @@ const check = (ok, what) => { console.log((ok ? "  ok   " : "  ÉCHEC ") + what)
 const browser = await chromium.launch();
 async function freshPage(state) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 780 } });
-  await ctx.route(/supabase\.co/, fakeSupabase(state));
+  await ctx.route(/supabase\.co|taild80a87\.ts\.net/, fakeSupabase(state));
   const page = await ctx.newPage();
   page.errors = [];
   page.on("pageerror", (e) => page.errors.push(e.message));
@@ -57,7 +57,7 @@ try {
   const visitors = (await p.textContent("#visitors")).replace(/\s/g, "");
   check(await p.isVisible("#visitors") && visitors.includes("1234") && visitors.includes("joueurssontvenus"), "le menu affiche le nombre de joueurs venus");
 
-  await p.click("#btn-settings"); await p.wait(400);
+  await p.click("#btn-more"); await p.click("#btn-settings"); await p.wait(400); // Réglages : dans le menu « ⋯ »
   st.offline = true;
   await p.click("#btn-logout"); await p.click("#btn-logout"); await p.wait(1500);
   check(await p.evaluate(() => NT.online.email() === "a@b.fr"), "hors ligne : la déconnexion est annulée");

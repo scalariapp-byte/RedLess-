@@ -15,7 +15,7 @@ const LINES = {
 // Starts a run; `patch` rewrites the mode's line of config.js. Returns the page.
 async function run({ mode = "classic", difficulty = "normal", patch = null, bot = false }) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 780 } });
-  await ctx.route(/supabase\.co/, (r) => r.fulfill({ json: [] }));
+  await ctx.route(/supabase\.co|taild80a87\.ts\.net/, (r) => r.fulfill({ json: [] }));
   if (patch) await ctx.route(/js\/config\.js$/, async (r) => {
     const res = await r.fetch(); r.fulfill({ response: res, body: (await res.text()).replace(LINES[mode], patch) });
   });

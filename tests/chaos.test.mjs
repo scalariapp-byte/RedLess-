@@ -12,7 +12,7 @@ const check = (ok, what) => { console.log((ok ? "  ok   " : "  ÉCHEC ") + what)
 const browser = await chromium.launch();
 try {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 780 } });
-  await ctx.route(/supabase\.co/, (r) => r.fulfill({ json: [] }));
+  await ctx.route(/supabase\.co|taild80a87\.ts\.net/, (r) => r.fulfill({ json: [] }));
   await ctx.route(/js\/config\.js$/, async (r) => {
     const res = await r.fetch();
     r.fulfill({ response: res, body: (await res.text()).replace("TELEPORT_EVERY: 3", "TELEPORT_EVERY: 1") });
