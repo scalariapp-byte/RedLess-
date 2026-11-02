@@ -1,10 +1,10 @@
 // Offline support for the installed web app (iPhone "Sur l'écran d'accueil", Android Chrome).
 // Core files are cached at install; everything else (music included) on first use.
 // The music is served from cache with byte ranges, because Safari streams audio with Range requests.
-const CACHE = "redless-v3.23";
+const CACHE = "redless-v3.24";
 const CORE = [
   "./", "index.html", "manifest.webmanifest", "css/style.css",
-  "js/config.js", "js/levels.js", "js/online-config.js", "js/online.js", "js/audio.js", "js/visuals.js", "js/minigame.js", "js/game.js",
+  "js/config.js", "js/levels.js", "js/online-config.js", "js/online.js", "js/leaderboard-config.js", "js/leaderboard.js", "js/audio.js", "js/visuals.js", "js/minigame.js", "js/game.js",
   "fonts/oxanium.woff2", "fonts/chakra-500.woff2", "fonts/chakra-600.woff2", "fonts/chakra-700.woff2",
   "assets/city.jpg", "assets/icon-180.png", "assets/icon-192.png", "assets/icon-512.png",
 ];

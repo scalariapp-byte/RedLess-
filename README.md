@@ -55,10 +55,14 @@ Dans **Modes de jeu** : Facile, Normal, Difficile, Hardcore, Impossible (tempo, 
 - **Rangs** selon les points de carrière (somme des scores) : Recrue, Cadet, Pilote, Vétéran, Élite, Spectre, Légende.
 - **Partage** du score en image (1080×1350). Le classement est uniquement mondial (voir plus bas).
 
-## Classement mondial et événement
+## Classement en ligne (score total)
+
+Une ligne par joueur : son **score total**, c'est-à-dire la somme des points de toutes ses parties, calculée par le téléphone (les « points de carrière »). Le téléphone lit sa ligne sur Supabase et n'envoie son total que s'il est plus haut ; le serveur ne le baisse jamais. Fichiers : `supabase/leaderboard.sql`, `js/leaderboard.js`, réglages dans `js/leaderboard-config.js`. Mise en place : [`supabase/README.md`](supabase/README.md), première section. Test : `node tests/leaderboard.test.mjs`.
+
+## Comptes et événement (serveur Raspberry Pi)
 
 Via Supabase (offre gratuite) : un pseudo, un identifiant anonyme par téléphone, des scores contrôlés côté serveur. En option, le joueur **protège son compte** avec son e-mail (code reçu par e-mail, sans mot de passe) : sa progression est sauvegardée en ligne et il la retrouve sur un autre téléphone.
-L'**événement** démarre **7 jours après le 30e joueur**, puis le classement **repart de zéro chaque mois** (saison 1, 2, 3…). Le classement est général : une ligne par joueur, avec le total de ses meilleurs scores de la saison dans tous les modes ; toucher un joueur ouvre son profil (ses scores mode par mode). Sans pseudo, le jeu en donne un automatiquement (« Pilote-1234 »), modifiable dans Réglages. Avant l'événement : pré-saison.
+Depuis la v3.24, l'écran Classement affiche le classement du score total (Supabase, ci-dessus) ; les saisons et l'événement du serveur Raspberry Pi ne sont plus affichés dans le jeu. Sans pseudo, le jeu en donne un automatiquement (« Pilote-1234 »), modifiable dans Réglages. Avant l'événement : pré-saison.
 
 **Connexion** : au lancement, tant que le joueur n'a pas de compte, l'écran « Connexion » s'affiche : créer un compte (pseudo + e-mail, code reçu par e-mail, pas de mot de passe), se connecter à un compte existant (la progression en ligne remplace celle du téléphone), ou jouer sans compte. Dans tous les cas, le jeu se connecte tout seul au serveur au démarrage (compte anonyme) ; l'adresse du serveur n'est plus modifiable dans le jeu.
 
@@ -70,7 +74,7 @@ Le pseudo est vérifié dès la création du compte (fonction `name_available` :
 
 **Statistiques** : `supabase/stats.sql` (installations, joueurs actifs, rétention J1/S1/M1, modes joués), à coller requête par requête dans le SQL Editor. Aucune donnée nouvelle collectée.
 
-**Tests** : `node tests/login.test.mjs`, `node tests/chaos.test.mjs` et `node tests/tempo.test.mjs` (Chromium + Playwright, Supabase simulé) ; lancés par GitHub Actions à chaque push.
+**Tests** : `node tests/leaderboard.test.mjs`, `node tests/login.test.mjs`, `node tests/chaos.test.mjs` et `node tests/tempo.test.mjs` (Chromium + Playwright, Supabase simulé) ; lancés par GitHub Actions à chaque push.
 Mise en place : **[`supabase/README.md`](supabase/README.md)** (SQL à coller : `supabase/schema.sql`, puis URL et clé publique dans `js/online-config.js`).
 
 ## Mises à jour
@@ -105,6 +109,7 @@ Redless © 2026 MyBlackWhite, tous droits réservés. Les musiques « Sync or Di
 
 ```
 index.html                  écrans
+js/leaderboard.js           classement en ligne du score total (Supabase)
 css/style.css               HUD, cases, animations
 js/config.js                modes, boutique, missions, rangs, pistes
 js/audio.js                 musique (horloge du jeu), synthé, vibrations

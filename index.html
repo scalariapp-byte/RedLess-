@@ -232,15 +232,9 @@
       <h2>Classement</h2>
       <span class="spacer"></span>
     </div>
-    <div class="event-card" id="event-card" data-frame="sm" hidden>
-      <span class="label" id="event-title">Événement mondial</span>
-      <b class="event-main" id="event-main"></b>
-      <span class="xpbar"><i id="event-bar"></i></span>
-      <span class="event-sub" id="event-sub"></span>
-    </div>
-    <p class="board-hint">Total de tous les points marqués cette saison, toutes parties classées réunies (à partir de Normal).</p>
+    <p class="board-hint">Score total : la somme des points de toutes tes parties, calculée par ton téléphone.</p>
     <ol class="board-list" id="board-list"></ol>
-    <p class="note" id="rank-note">Classement mondial</p>
+    <p class="note" id="rank-note">Classement en ligne</p>
   </section>
 
   <!-- PLAYER PROFILE -->
@@ -393,7 +387,7 @@
       <div class="set-row"><span>Confidentialité</span><button class="btn small" id="btn-privacy" data-frame="sm">Lire</button></div>
       <div class="set-row"><span>Progression<small id="reset-hint">Crédits, records, achats</small></span><button class="btn small danger" id="btn-reset" data-frame="sm">Effacer</button></div>
     </div>
-    <p class="note">Version <span id="app-version">3.23</span></p>
+    <p class="note">Version <span id="app-version">3.24</span></p>
     <p class="note credits">Redless © 2026 <b>MyBlackWhite</b>. Tous droits réservés.<br>Musiques « Sync or Die », « Every Scar A Shield », « The Velvet Hour » : MyBlackWhite. Réutilisation interdite sans autorisation.<br>17 musiques libres (CC0, OpenGameArt) : Alexander Ehlers, Fupi, G_P, da9elb, Centurion_of_war, TAD. Merci !</p>
   </section>
 
@@ -453,7 +447,7 @@
     <button class="tab-btn" id="tab-home" data-screen="menu"><span>Accueil</span></button>
     <button class="tab-btn" id="tab-levels" data-screen="levels"><span>Niveaux</span></button>
     <button class="tab-btn" id="btn-shop" data-screen="shop"><span>Boutique</span></button>
-    <button class="tab-btn" id="btn-board" data-screen="ranking"><span>Classement</span><b class="pill" id="rank-pill" hidden></b></button>
+    <button class="tab-btn" id="btn-board" data-screen="ranking"><span>Classement</span></button>
     <button class="tab-btn" id="btn-missions" data-screen="missions"><span>Missions</span><b class="pill" id="missions-pill" hidden></b></button>
   </nav>
 
@@ -464,15 +458,6 @@
   </div>
 
   <!-- BAN (admin): confirmation before banning or unbanning a player -->
-  <div class="modal" id="ban-modal" hidden>
-    <div class="modal-card" data-frame="sm">
-      <p class="ban-text" id="ban-text"></p>
-      <div class="menu-actions two">
-        <button class="btn danger" id="btn-ban-yes" data-frame="sm">Bannir</button>
-        <button class="btn" id="btn-ban-no" data-frame="sm">Annuler</button>
-      </div>
-    </div>
-  </div>
 
   <!-- SHARE MODAL -->
   <div class="modal" id="share-modal" hidden>
@@ -508,6 +493,8 @@
 <script src="js/levels.js"></script>
 <script src="js/online-config.js"></script>
 <script src="js/online.js"></script>
+<script src="js/leaderboard-config.js"></script>
+<script src="js/leaderboard.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/visuals.js"></script>
 <script src="js/minigame.js"></script>

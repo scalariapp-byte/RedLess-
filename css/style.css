@@ -613,12 +613,7 @@ html, body { touch-action: manipulation; }
 .icon-btn.small-x { width: 28px; height: 28px; font-size: 20px; line-height: 1; flex: none; }
 .toggle:disabled { opacity: .35; cursor: not-allowed; }
 
-/* world leaderboard */
-.event-card { display: grid; gap: 5px; padding: 12px 14px; }
-.event-card .frame-svg .line, .event-card .frame-svg .tick { stroke: var(--gold); }
-.event-card .label { color: var(--gold); }
-.event-main { font-family: var(--font-display); font-size: 20px; letter-spacing: .06em; text-transform: uppercase; }
-.event-sub { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+/* online leaderboard */
 .board-list li.gap { display: block; background: none; border: 0; padding: 0 14px; color: var(--muted); text-align: center; }
 .over-online { margin: 0; font-size: 14px; line-height: 1.4; color: var(--holo); }
 .over-online.ok { color: var(--green); }
@@ -897,6 +892,4 @@ html, body { touch-action: manipulation; }
 .rank-row.now { border-left-color: var(--gold); background: linear-gradient(90deg, color-mix(in srgb, var(--gold) 16%, transparent), var(--panel) 65%); }
 .rank-row.now .rr-num, .rank-row.now .rr-name b, .rank-row.now .rr-state { color: var(--gold); }
 .rank-row.locked { opacity: .7; }/* ---------- bannir (admin, 3.23) ---------- */
-.ban-text { margin: 0; font-size: 15px; line-height: 1.45; color: var(--ink); }
-.board-list li.banned { opacity: .6; border-left-color: var(--red); }
 .board-list li.banned .rank { color: var(--red); }

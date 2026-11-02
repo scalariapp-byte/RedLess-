@@ -4,7 +4,7 @@
   const LV = NT.levels;
   const { Music, MenuMusic, Synth, haptic } = NT;
   const fx = NT.fx;
-  const VERSION = "3.23";
+  const VERSION = "3.24";
 
   // ---------- storage (may be unavailable) ----------
   const KEY = "ntplr-save-v1";
@@ -938,7 +938,7 @@
     $("#btn-over-menu").textContent = G.levelNo ? "Niveaux" : "Menu";
     const form = $("#name-form"), input = $("#name-input");
     // Pseudo asked once, for the world leaderboard (changed later in Réglages).
-    form.hidden = !!S.name || !NT.online.enabled || !NT.online.GLOBAL_MODES.includes(G.modeId) || G.score === 0 || !!G.levelNo || !D.ranked;
+    form.hidden = !!S.name || !NT.board.enabled || S.xp <= 0;
     input.value = S.name;
     clearTiles();
     bindAll();
@@ -946,43 +946,34 @@
     countUp($("#over-score"), G.score);
     if (rk.i > rankBefore.i) setTimeout(() => toast(`Nouveau rang : ${rk.name}`), 900);
     else if (done.length) setTimeout(() => toast(`${done.length} mission${done.length > 1 ? "s" : ""} accomplie${done.length > 1 ? "s" : ""}`), 900);
-    // World leaderboard: modes only, from Normal up.
-    if (G.levelNo) $("#over-online").hidden = true;
-    else if (!D.ranked) { const el = $("#over-online"); el.hidden = false; el.className = "over-online"; el.textContent = `${D.name} : partie non classée au mondial.`; }
-    else onlineSubmit(run);
+    // Online board: the phone's total (every game counts), sent only if higher than online.
+    boardSubmit();
   }
-  // ---------- world leaderboard ----------
-  let unsentRun = null;
+  // ---------- online board (total score, Supabase) ----------
   const ordinal = (n) => (n === 1 ? "1er" : n + "e");
   const autoName = () => "Pilote-" + String(1000 + ((Math.random() * 9000) | 0));
-  // retry: the game's points are already waiting on the phone, only send them again.
-  async function onlineSubmit(run, retry = false) {
+  // Silent sync (startup, menu, pseudo change): reads the board, sends the total only if higher.
+  const boardSync = () => (NT.board.enabled && S.name ? NT.board.sync(S.xp, S.name).catch(() => null) : Promise.resolve(null));
+  // End of a game: same sync, with its result shown on the end screen.
+  async function boardSubmit() {
     const el = $("#over-online");
-    unsentRun = null;
-    if (!NT.online.enabled || !NT.online.GLOBAL_MODES.includes(run.mode) || run.score <= 0) { el.hidden = true; return; }
+    if (!NT.board.enabled || S.xp <= 0) { el.hidden = true; return; }
     el.hidden = false; el.className = "over-online";
-    // No pseudo yet: the score still goes straight to the world board, under a generated one.
+    // No pseudo yet: the total still goes to the board, under a generated one.
     let auto = false;
     if (!S.name) { S.name = autoName(); save(); auto = true; }
-    el.textContent = "Envoi au classement mondial…";
+    el.textContent = "Classement en ligne…";
     try {
-      let r;
-      try { r = retry ? await NT.online.send(S.name) : await NT.online.submit(run, S.name); }
-      catch (e) {
-        if (!auto || !/déjà pris/.test(e.message)) throw e;
-        S.name = autoName(); save();
-        r = await NT.online.send(S.name);
-      }
+      const r = await NT.board.sync(S.xp, S.name);
       if (!r) { el.hidden = true; return; }
-      if (r.queued) { el.textContent = "Tes points sont gardés : ils partiront au classement mondial dès que possible."; return; }
       el.className = "over-online ok";
-      el.textContent = `Mondial : ${ordinal(r.rank)} ${r.season ? `de la saison ${r.season}` : "de la pré-saison"} · ton total : ${r.total} points`
+      el.textContent = `En ligne : ${ordinal(r.rank)} sur ${r.players} · ton total : ${r.total.toLocaleString("fr-FR")} points`
         + (auto ? ` · ton pseudo : ${S.name} (à changer ci-dessous ou dans Réglages)` : "");
       if (auto) { $("#name-form").hidden = false; $("#name-input").value = S.name; }
     } catch (e) {
       el.className = "over-online bad";
-      el.textContent = `Classement mondial : ${e.message}.`;
-      if (/pseudo/.test(e.message)) { unsentRun = run; $("#name-form").hidden = false; }
+      el.textContent = e.offline ? "Hors ligne : ton total partira au classement à la prochaine connexion." : `Classement en ligne : ${e.message}.`;
+      if (/pseudo/.test(e.message)) $("#name-form").hidden = false;
     }
   }
   $("#name-form").addEventListener("submit", (e) => {
@@ -993,8 +984,8 @@
     S.name = name; save();
     $("#name-input").blur();
     toast("Pseudo enregistré");
-    if (unsentRun) onlineSubmit(unsentRun, true);
-    else if (changed && NT.online.enabled) NT.online.rename(name).catch((e) => !e.offline && toast(e.message));
+    if (changed && NT.online.enabled) NT.online.rename(name).catch(() => {});
+    if (changed) boardSubmit();
   });
 
   // ---------- start, pause, quit ----------
@@ -1082,7 +1073,7 @@
     renderDaily();
     const doneCount = S.missions.list.filter((m) => m.done).length;
     const pill = $("#missions-pill"); pill.hidden = false; pill.textContent = `${doneCount}/3`;
-    refreshEventPill();
+    refreshOnline();
   }
   // Défi du jour: its card is on the « Modes de jeu » page; home only shows a pill while it waits.
   function renderDaily() {
@@ -1370,7 +1361,7 @@
   }
 
   // ---------- leaderboard ----------
-  let boardReq = 0, boardSeason = null;
+  let boardReq = 0;
   function boardRow(rank, name, small, score, me, k, onOpen) {
     const li = document.createElement("li");
     if (me) li.className = "me";
@@ -1390,94 +1381,33 @@
   }
   function emptyRow(text) { const li = document.createElement("li"); li.className = "empty"; li.textContent = text; return li; }
   function renderBoard() {
-    $("#event-card").hidden = true; // shown by renderEvent once the event is announced
     const ol = $("#board-list"); ol.innerHTML = "";
     renderWorld(ol);
   }
-  const fmtLeft = (ms) => {
-    const h = Math.max(0, Math.floor(ms / 3600000)), d = Math.floor(h / 24);
-    return d >= 1 ? `${d} j ${h % 24} h` : h >= 1 ? `${h} h` : `${Math.max(1, Math.ceil(ms / 60000))} min`;
-  };
-  // Fills the event card. Times are computed from the server clock, not the phone's.
-  function renderEvent(info) {
-    const main = $("#event-main"), sub = $("#event-sub"), bar = $("#event-bar");
-    const now = new Date(info.server_now).getTime();
-    $("#rank-note").textContent = info.season === 0 ? "Pré-saison · classement mondial" : `Saison ${info.season} · classement mondial du mois`;
-    // Before the event is announced: no card, no player counter.
-    if (!info.threshold_at) return;
-    $("#event-card").hidden = false;
-    if (info.season === 0) {
-      const left = new Date(info.event_start).getTime() - now;
-      main.textContent = `Début dans ${fmtLeft(left)}`;
-      sub.textContent = `La saison 1 commence le ${new Date(info.event_start).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}.`;
-      bar.style.width = Math.min(100, (1 - left / (7 * 864e5)) * 100) + "%";
-    } else {
-      const st = new Date(info.season_start).getTime(), en = new Date(info.season_end).getTime();
-      main.textContent = `Saison ${info.season} · fin dans ${fmtLeft(en - now)}`;
-      sub.textContent = "Total de tous tes points. Remise à zéro chaque mois.";
-      bar.style.width = Math.min(100, ((now - st) / (en - st)) * 100) + "%";
-    }
-    fx.initFrames($("#event-card")); fx.redrawFrames($("#event-card"));
-  }
   async function renderWorld(ol) {
-    $("#rank-note").textContent = "Classement mondial";
-    if (!NT.online.enabled) {
-      $("#event-card").hidden = true;
-      return ol.appendChild(emptyRow("Le classement mondial n'est pas encore activé sur cette version."));
-    }
+    $("#rank-note").textContent = "Classement en ligne";
+    if (!NT.board.enabled) return ol.appendChild(emptyRow("Le classement en ligne n'est pas encore activé sur cette version."));
     const req = ++boardReq;
     ol.appendChild(emptyRow("Chargement…"));
     try {
-      const [info, rows, admin] = await Promise.all([NT.online.eventInfo(), NT.online.overall(), NT.online.isAdmin()]);
+      await boardSync(); // the phone's own total first, so its row is up to date
+      const rows = await NT.board.top(100);
       if (req !== boardReq || current !== "ranking") return;
       ol.innerHTML = "";
-      if (info) { renderEvent(info); boardSeason = info.season; }
-      if (admin) $("#rank-note").textContent = "Admin : touche un joueur pour le bannir";
-      if (!rows || !rows.length) ol.appendChild(emptyRow("Personne n'est encore classé ce mois-ci. Termine une partie pour être le premier."));
+      if (!rows.length) ol.appendChild(emptyRow("Personne n'est encore classé. Termine une partie pour être le premier."));
       let last = 0;
       rows.forEach((r, k) => {
         if (r.rank > last + 1 && last > 0) { const gap = document.createElement("li"); gap.className = "gap"; gap.textContent = "…"; ol.appendChild(gap); }
-        const n = r.games ?? r.modes;
-        const small = `${n} partie${n > 1 ? "s" : ""}${r.is_me ? " · toi" : ""}`;
-        ol.appendChild(boardRow(r.rank, r.name, small, r.total, r.is_me, k, admin && !r.is_me ? () => askBan(r.name, true) : null));
+        ol.appendChild(boardRow(r.rank, r.name, r.is_me ? "toi" : "", r.total.toLocaleString("fr-FR"), r.is_me, k, null));
         last = r.rank;
       });
-      // Admin only: banned players at the bottom, a tap offers to unban.
-      if (admin) {
-        const list = (await NT.online.banned().catch(() => [])) || [];
-        if (req !== boardReq || current !== "ranking") return;
-        if (list.length) {
-          const head = document.createElement("li"); head.className = "gap"; head.textContent = "Joueurs bannis · touche pour débannir"; ol.appendChild(head);
-          list.forEach((b, k) => { const li = boardRow("×", b.name, "banni", b.total, false, k, () => askBan(b.name, false)); li.classList.add("banned"); ol.appendChild(li); });
-        }
-      }
+      if (!S.name) $("#rank-note").textContent = "Termine une partie pour apparaître au classement.";
     } catch (e) {
       if (req !== boardReq) return;
       ol.innerHTML = "";
-      ol.appendChild(emptyRow(e.offline ? "Pas de connexion. Le classement mondial s'affichera dès que tu seras en ligne." : `Classement indisponible : ${e.message}`));
+      ol.appendChild(emptyRow(e.offline ? "Pas de connexion. Le classement s'affichera dès que tu seras en ligne." : `Classement indisponible : ${e.message}`));
     }
   }
-
-  // Ban / unban (admin), with a confirmation window (no system dialog: the Android app has none).
-  let banTarget = null;
-  function askBan(name, on) {
-    banTarget = { name, on };
-    $("#ban-text").textContent = on
-      ? `Bannir ${name} du classement mondial ? Il disparaît du classement et ne peut plus y envoyer de points.`
-      : `Débannir ${name} ? Il revient au classement avec ses points.`;
-    $("#btn-ban-yes").textContent = on ? "Bannir" : "Débannir";
-    $("#ban-modal").hidden = false;
-    fx.initFrames($("#ban-modal")); fx.redrawFrames($("#ban-modal"));
-  }
-  $("#btn-ban-no").onclick = () => { $("#ban-modal").hidden = true; };
-  $("#btn-ban-yes").onclick = async () => {
-    if (!banTarget) return;
-    const { name, on } = banTarget;
-    $("#ban-modal").hidden = true;
-    try { await NT.online.ban(name, on); toast(on ? `${name} est banni` : `${name} est débanni`); }
-    catch (e) { toast(e.offline ? "Pas de connexion" : e.message); }
-    if (current === "ranking") renderBoard();
-  };
 
   // ---------- missions & rank ----------
   function renderMissions() {
@@ -1721,6 +1651,7 @@
     const changed = name !== S.name;
     S.name = name; save();
     if (changed) await NT.online.rename(name).catch(() => {}); // checked again with the first score
+    if (changed) boardSync();
   }
   $("#btn-login-switch").onclick = () => setLogin(login.step === "code" ? login.mode : login.mode === "create" ? "login" : "create", "email");
   $("#btn-login-guest").onclick = () => {
@@ -1773,6 +1704,7 @@
       catch (err) { if (!err.offline) return toast(err.message); }
     }
     S.name = name; save(); $("#set-name").blur(); toast("Pseudo enregistré");
+    boardSync();
   });
   $("#set-music").addEventListener("input", (e) => { S.musicVol = e.target.value / 100; Music.applyVolume(); MenuMusic.applyVolume(); Synth.init(); Synth.applyVolume(); save(); });
   $("#set-sfx").addEventListener("input", (e) => { S.sfxVol = e.target.value / 100; Synth.init(); Synth.applyVolume(); save(); });
@@ -2033,7 +1965,6 @@
     if (!$("#site-view").hidden) { closeSite(); return true; }
     if (!$("#more-menu").hidden) { closeMore(); return true; }
     if (!$("#share-modal").hidden) { $("#share-modal").hidden = true; return true; }
-    if (!$("#ban-modal").hidden) { $("#ban-modal").hidden = true; return true; }
     if (current === "play") {
       if (G && G.running && !G.paused) { pause(); return true; }
       if (G && G.paused) { quit(); return true; }
@@ -2077,19 +2008,13 @@
   $("#btn-install").onclick = async () => { if (!installPrompt) return; installPrompt.prompt(); try { await installPrompt.userChoice; } catch {} installPrompt = null; $("#install").hidden = true; };
   $("#btn-install-close").onclick = () => { $("#install").hidden = true; try { localStorage.setItem("redless-install-hidden", "1"); } catch {} };
 
-  // Event status on the menu's Classement button, refreshed at most once a minute.
-  let eventPillAt = 0;
-  async function refreshEventPill() {
-    if (!NT.online.enabled || Date.now() - eventPillAt < 60000) return;
-    eventPillAt = Date.now();
-    refreshVisitors();
-    try {
-      const info = await NT.online.eventInfo(), p = $("#rank-pill");
-      if (!info) return;
-      // No player counter: the pill only appears once the event is announced.
-      p.hidden = !info.threshold_at;
-      p.textContent = info.season === 0 ? "Bientôt" : `Saison ${info.season}`;
-    } catch {}
+  // On the menu, at most once a minute: visitor counter, and the total sent to the board if higher.
+  let onlineAt = 0;
+  function refreshOnline() {
+    if (Date.now() - onlineAt < 60000) return;
+    onlineAt = Date.now();
+    if (NT.online.enabled) refreshVisitors();
+    boardSync();
   }
   // « N joueurs sont venus » on the menu: last known value shown at once (offline too), refreshed
   // with the event pill. Hidden if the server is older than the counter.
@@ -2112,6 +2037,7 @@
   try { showVisitors(+localStorage.getItem(VISITORS) || 0); } catch {}
   // Automatic connection to the game server at startup (anonymous account, then queued scores).
   if (NT.online.enabled) NT.online.connect(S.name);
+  window.addEventListener("online", () => boardSync());
   setTimeout(() => $("#splash")?.remove(), 1000); // startup animation is over
 
   // ---------- update available ----------

@@ -1,5 +1,28 @@
 # Connecter Redless à Supabase (classement mondial)
 
+## Classement du score total (v3.24) : la seule partie à faire pour le classement
+
+Le téléphone calcule lui-même le score total du joueur (somme des scores de toutes ses parties, les « points de carrière »). Au démarrage, sur le menu (au plus une fois par minute), à chaque fin de partie, à l'ouverture du Classement et quand le pseudo change, il lit sa ligne en ligne et n'envoie son total **que s'il est plus haut** (ou si le pseudo a changé). Le serveur ne baisse jamais un total.
+
+Pas de compte Supabase à activer : chaque téléphone tire un secret aléatoire au premier lancement, le serveur n'en garde que l'empreinte.
+
+1. Supabase → **New project** (offre gratuite, région Paris ou Frankfurt).
+2. **SQL Editor** → **New query** → colle **tout** [`leaderboard.sql`](leaderboard.sql) → **Run** (« Success. No rows returned »). Ré-exécutable.
+3. **Project Settings → API** (ou **API Keys**) : copie la **Project URL** et la **clé publique** (`anon` ou `sb_publishable_…`). Jamais la clé `service_role` / `sb_secret_…`.
+4. Mets-les dans [`js/leaderboard-config.js`](../js/leaderboard-config.js) :
+   ```js
+   window.REDLESS_BOARD = { url: "https://xxxxxxxx.supabase.co", key: "sb_publishable_…" };
+   ```
+5. Reconstruis l'APK (`android/build.sh`) ; Vercel redéploie à la fusion dans `main`.
+
+Vérifier : joue une partie qui marque des points. L'écran de fin affiche « En ligne : 1er sur 1 · ton total : … ». Dans Supabase, **Table Editor → `board`** montre la ligne.
+
+Modérer : supprimer la ligne dans `board`. Si le même téléphone renvoie un total, il revient : pour bloquer un tricheur, note son `secret_hash` et ajoute une règle dans `board_submit`.
+
+Limite : le score est calculé par le téléphone, donc quelqu'un qui modifie le jeu ou appelle `board_submit` directement peut envoyer n'importe quel total (jusqu'à 1 milliard). C'est le prix de « le téléphone calcule ». Surveille le haut du classement.
+
+Les sections ci-dessous concernent l'ancien classement par saisons, les comptes e-mail et les installations, qui passent par le serveur Raspberry Pi (`js/online-config.js`) : elles ne sont pas nécessaires pour ce classement.
+
 Durée : 10 minutes, faisable sur téléphone. Offre gratuite de Supabase suffisante.
 
 ## 1. Créer le projet
