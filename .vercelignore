@@ -4,3 +4,4 @@ dist/*.aab
 *.md
 !PRIVACY.md
 tests
+pi
