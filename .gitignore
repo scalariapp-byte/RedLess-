@@ -7,4 +7,3 @@ android/build/
 dist/*.aab
 node_modules/
 public/
-bot/donnees/
