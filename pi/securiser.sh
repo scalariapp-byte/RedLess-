@@ -5,6 +5,7 @@
 set -euo pipefail
 [ "$(id -u)" = 0 ] || { echo "Lance avec sudo."; exit 1; }
 U="${SUDO_USER:-pi}"
+export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a
 
 echo "== 1. Mises à jour (et automatiques ensuite)"
 apt-get update -q && apt-get -yq full-upgrade
