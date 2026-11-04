@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Builds the Android app from the web game. Requires a JDK (17+), curl, unzip and zip.
 #
-#   android/build.sh          -> dist/redless.apk  (install directly on a phone)
-#   android/build.sh aab      -> dist/redless.aab  (upload to the Play Store)
+#   android/build.sh          -> dist/redlok.apk  (install directly on a phone)
+#   android/build.sh aab      -> dist/redlok.aab  (upload to the Play Store)
 #
 # Environment:
 #   RELEASE_KEYSTORE, RELEASE_KEY_ALIAS, RELEASE_STORE_PASSWORD, RELEASE_KEY_PASSWORD
@@ -52,7 +52,7 @@ if [ "$FORMAT" = "aab" ]; then
   mv "$M/AndroidManifest.xml" "$M/manifest/"
   cp "$OUT/classes.dex" "$M/dex/"
   (cd "$M" && zip -qr "$OUT/base.zip" .)
-  AAB="$ROOT/dist/redless.aab"
+  AAB="$ROOT/dist/redlok.aab"
   rm -f "$AAB"
   java -jar "$T/bundletool.jar" build-bundle --modules="$OUT/base.zip" --output="$AAB"
   if [ "$HAS_KEY" = 1 ]; then
@@ -73,5 +73,5 @@ if [ "$HAS_KEY" = 1 ]; then
   SIGN+=(--ks "$RELEASE_KEYSTORE" --ksAlias "$RELEASE_KEY_ALIAS" --ksPass "$RELEASE_STORE_PASSWORD" --ksKeyPass "${RELEASE_KEY_PASSWORD:-$RELEASE_STORE_PASSWORD}")
 fi
 java -jar "$T/signer.jar" "${SIGN[@]}" >/dev/null
-cp "$OUT"/signed/*.apk "$ROOT/dist/redless.apk"
-echo "APK ($([ "$HAS_KEY" = 1 ] && echo "clé de publication" || echo "clé de debug")) : $ROOT/dist/redless.apk"
+cp "$OUT"/signed/*.apk "$ROOT/dist/redlok.apk"
+echo "APK ($([ "$HAS_KEY" = 1 ] && echo "clé de publication" || echo "clé de debug")) : $ROOT/dist/redlok.apk"

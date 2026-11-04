@@ -9,7 +9,8 @@ DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PORT=8787
 DATA=/var/lib/redless
 CONF=/etc/redless/redless.env
-ADRESSE=redless.taild80a87.ts.net
+ADRESSE=redlok.taild80a87.ts.net
+ANCIENNE=redless.taild80a87.ts.net   # adresse d'avant la 3.24, gardée pour les joueurs déjà installés
 export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a
 
 echo "== 1. Node.js"
@@ -113,31 +114,36 @@ if ! command -v tailscale >/dev/null; then
   exit 0
 fi
 NOM=$(tailscale status --json 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).Self.DNSName.replace(/\.$/,""))}catch{console.log("")}})')
-if [ "$NOM" = "$ADRESSE" ]; then
-  # Le Pi s'appelle déjà « redless » : Funnel du Tailscale principal.
-  ACTUEL=$(tailscale funnel status 2>/dev/null || true)
-  if echo "$ACTUEL" | grep -q "127.0.0.1:$PORT"; then
-    echo "Funnel déjà réglé vers le serveur Redlok."
-  else
-    if echo "$ACTUEL" | grep -q "proxy\|path\|http"; then
-      echo "Funnel sert déjà autre chose :"; echo "$ACTUEL"
-      read -r -p "Le remplacer par le serveur Redlok ? [o/N] " r
-      [ "$r" = o ] || [ "$r" = O ] || { echo "Funnel laissé tel quel."; exit 0; }
-      tailscale funnel reset || true
+# Deux adresses mènent au même serveur : redlok (actuelle) et redless (ancienne : applis Android
+# d'avant la 3.24, écrans d'accueil iPhone, liens déjà partagés). Pour chacune : si le Pi porte déjà
+# ce nom, Funnel du Tailscale principal ; sinon, une identité Tailscale de plus, sans toucher au reste.
+publier() {
+  local adresse="$1" court="${1%%.*}"
+  if [ "$NOM" = "$adresse" ]; then
+    ACTUEL=$(tailscale funnel status 2>/dev/null || true)
+    if echo "$ACTUEL" | grep -q "127.0.0.1:$PORT"; then
+      echo "Funnel déjà réglé vers le serveur Redlok."
+    else
+      if echo "$ACTUEL" | grep -q "proxy\|path\|http"; then
+        echo "Funnel sert déjà autre chose :"; echo "$ACTUEL"
+        read -r -p "Le remplacer par le serveur Redlok ? [o/N] " r
+        [ "$r" = o ] || [ "$r" = O ] || { echo "Funnel laissé tel quel."; return 0; }
+        tailscale funnel reset || true
+      fi
+      tailscale funnel --bg "$PORT" || { echo "Active Funnel avec le lien ci-dessus, puis relance : sudo bash pi/installer.sh"; exit 1; }
     fi
-    tailscale funnel --bg "$PORT" || { echo "Active Funnel avec le lien ci-dessus, puis relance : sudo bash pi/installer.sh"; exit 1; }
+    tailscale funnel status || true
+  else
+    echo "Identité Tailscale « $court » pour https://$adresse/"
+    PORT="$PORT" bash "$DIR/pi/tailscale-identite.sh" "$court"
   fi
-  tailscale funnel status || true
-else
-  # Le Pi a un autre nom (et publie peut-être déjà autre chose) : 2e identité Tailscale « redless »,
-  # sans toucher au Tailscale principal.
-  echo "Ce Pi s'appelle « ${NOM:-inconnu} » sur Tailscale : Redlok aura sa propre identité « redless »."
-  PORT="$PORT" bash "$DIR/pi/tailscale-redless.sh"
-fi
+}
+publier "$ADRESSE"
+publier "$ANCIENNE"
 
 echo
 echo "Installé."
-echo "  Site    : https://$ADRESSE/"
+echo "  Site    : https://$ADRESSE/   (ancienne adresse, toujours servie : https://$ANCIENNE/)"
 echo "  Jeu     : https://$ADRESSE/jouer/"
 echo "  Santé   : https://$ADRESSE/sante"
 echo "  Journal : journalctl -u redless -f"

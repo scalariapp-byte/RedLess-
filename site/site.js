@@ -14,7 +14,7 @@
   }
 
   // Même serveur que le jeu (clé PUBLIQUE, lecture seule ici : on n'envoie rien).
-  const SUPABASE = "https://redless.taild80a87.ts.net"; // serveur Redlok sur le Raspberry Pi
+  const SUPABASE = "https://redlok.taild80a87.ts.net"; // serveur Redlok sur le Raspberry Pi
   const KEY = "sb_publishable_1YNfBYNhh6CfBoAYC3yZOw_2pJc9GNH";
 
   async function rpc(name, params = {}) {
@@ -36,7 +36,7 @@
   document.documentElement.classList.add(isIOS ? "is-ios" : isAndroid ? "is-android" : "is-desktop");
   const heroDl = $("#hero-dl");
   if (heroDl && isIOS) { heroDl.textContent = "Installer sur iPhone"; heroDl.href = "iphone.html"; }
-  if (heroDl && isAndroid) { heroDl.textContent = "Télécharger pour Android"; heroDl.href = "redless.apk"; heroDl.setAttribute("download", ""); }
+  if (heroDl && isAndroid) { heroDl.textContent = "Télécharger pour Android"; heroDl.href = "redlok.apk"; heroDl.setAttribute("download", ""); }
   const notSafari = $("#ios-not-safari");
   if (notSafari && isIOS && !inSafari) notSafari.hidden = false;
   const copyBtn = $("#copy-game-link");

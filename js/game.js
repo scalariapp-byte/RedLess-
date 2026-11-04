@@ -1989,7 +1989,7 @@
   // Invite friends: sends the site link through the phone's share menu (WhatsApp, SMS…).
   async function shareGame() {
     sfx("ui");
-    const link = "https://redless.taild80a87.ts.net/";
+    const link = "https://redlok.taild80a87.ts.net/";
     const text = "Viens jouer à Redlok ! Touche le vert, jamais le rouge. C'est gratuit :";
     const n = NT.native();
     if (n && n.shareText) { n.shareText(`${text} ${link}`); return; }
@@ -2004,7 +2004,7 @@
   // ?site: the page must not send us back to the game; inside the frame it hides its own header.
   function openSite() {
     sfx("ui");
-    $("#site-frame").src = "https://redless.taild80a87.ts.net/?site";
+    $("#site-frame").src = "https://redlok.taild80a87.ts.net/?site";
     $("#site-view").hidden = false;
   }
   function closeSite() {
@@ -2118,8 +2118,8 @@
   // The site publishes version.json (written at deploy from VERSION). If it is newer than this
   // copy, a bar offers « Mettre à jour »: the web app refreshes itself, the Android app downloads
   // the new APK (published by the GitHub workflow under the « latest » release).
-  const SITE = "https://redless.taild80a87.ts.net/";
-  const APK_URL = "https://github.com/anonyme5575/redless/releases/download/latest/redless.apk";
+  const SITE = "https://redlok.taild80a87.ts.net/";
+  const APK_URL = "https://github.com/anonyme5575/redless/releases/download/latest/redlok.apk";
   const newer = (a, b) => {
     const x = String(a).split(".").map(Number), y = String(b).split(".").map(Number);
     for (let i = 0; i < Math.max(x.length, y.length); i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0);

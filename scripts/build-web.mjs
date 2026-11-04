@@ -3,7 +3,7 @@ import { cpSync, rmSync, mkdirSync, existsSync, readFileSync, writeFileSync } fr
 import { execFileSync } from "node:child_process";
 
 const OUT = "public";
-const FILES = ["index.html", "manifest.webmanifest", "sw.js", "PRIVACY.md", "COPYRIGHT.md", "css", "js", "fonts", "assets", "audio", "dist/redless.apk"];
+const FILES = ["index.html", "manifest.webmanifest", "sw.js", "PRIVACY.md", "COPYRIGHT.md", "css", "js", "fonts", "assets", "audio", "dist/redlok.apk"];
 
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT);

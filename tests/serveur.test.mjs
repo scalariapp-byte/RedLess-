@@ -215,8 +215,10 @@ await step("site, jeu, version.json, APK, musique par morceaux, fichiers interdi
   const version = { version: readFileSync(new URL("../js/game.js", import.meta.url), "utf8").match(/const VERSION = "([^"]+)"/)[1] };
   assert.deepEqual(await (await get("/version.json")).json(), version);
   assert.deepEqual(await (await get("/jouer/version.json")).json(), version);
-  const apk = await get("/redless.apk");
-  assert.equal(apk.status, 302); assert.match(apk.headers.get("location"), /releases\/download\/latest\/redless\.apk$/);
+  for (const name of ["/redlok.apk", "/redless.apk"]) { // redless.apk : ancien nom, liens déjà partagés
+    const apk = await get(name);
+    assert.equal(apk.status, 302); assert.match(apk.headers.get("location"), /releases\/download\/latest\/redlok\.apk$/);
+  }
   const mp3 = readdirSync(new URL("../audio/", import.meta.url)).find((f) => f.endsWith(".mp3"));
   const part = await get("/jouer/audio/" + mp3, { Range: "bytes=0-99" });
   assert.equal(part.status, 206); assert.equal((await part.arrayBuffer()).byteLength, 100);
@@ -269,7 +271,7 @@ await step("le jeu (js/online.js) contre ce serveur : connexion, points, classem
   const browser = await chromium.launch();
   try {
     const ctx = await browser.newContext();
-    // Les appels du jeu à redless.taild80a87.ts.net partent vers ce serveur local.
+    // Les appels du jeu à redlok.taild80a87.ts.net partent vers ce serveur local.
     await ctx.route(/taild80a87\.ts\.net/, async (route) => {
       const req = route.request(), u = new URL(req.url());
       const res = await fetch(app.url + u.pathname + u.search, { method: req.method(), headers: req.headers(), body: req.postData() || undefined });

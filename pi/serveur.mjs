@@ -23,7 +23,7 @@ export function settings(env = process.env) {
     admin: (env.ADMIN_EMAIL || "scalariapp@gmail.com").trim().toLowerCase(),
     notify: (env.NOTIFY_EMAIL || "scalariapp@gmail.com").trim(),
     // APK signé avec la clé personnelle : le seul qui s'installe par-dessus l'appli des joueurs.
-    apkUrl: env.APK_URL || "https://github.com/anonyme5575/redless/releases/download/latest/redless.apk",
+    apkUrl: env.APK_URL || "https://github.com/anonyme5575/redless/releases/download/latest/redlok.apk",
     playersNeeded: +(env.PLAYERS_NEEDED || 30),
     delayMs: (+(env.EVENT_DELAY_DAYS ?? 7)) * 86400e3,
     // Tailscale Funnel transmet l'adresse du joueur dans X-Forwarded-For.
@@ -479,7 +479,8 @@ export function createApp(cfg = settings()) {
     const game = pathname.startsWith("/jouer/");
     let rel = game ? pathname.slice(7) : pathname.slice(1);
     if (rel === "version.json") return { special: "version" };
-    if (rel === "redless.apk" || (!game && rel === "dist/redless.apk")) return { redirect: cfg.apkUrl };
+    // redless.apk : ancien nom (liens partagés avant la 3.24), même APK.
+    if (/^(dist\/)?red(lok|less)\.apk$/.test(rel) && (!game || !rel.startsWith("dist/"))) return { redirect: cfg.apkUrl };
     if (rel === "" || rel.endsWith("/")) rel += "index.html";
     const parts = rel.split("/");
     if (parts.some((s) => !s || s.startsWith(".") || s.includes("\\") || s.includes("\0"))) return null;

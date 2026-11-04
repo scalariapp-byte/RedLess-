@@ -4,7 +4,7 @@ But : trouver ce qui ne marche pas sur de vrais appareils (latence du toucher, s
 Prévoir 3 à 4 testeurs, 10 minutes chacun, si possible sur des téléphones différents (dont un d'entrée de gamme).
 
 ## Préparation
-1. Installer `dist/redless.apk` (ou l'APK de l'onglet Actions de GitHub).
+1. Installer `dist/redlok.apk` (ou l'APK de l'onglet Actions de GitHub).
 2. Ne rien expliquer au testeur : le tutoriel doit suffire.
 3. Noter le modèle de téléphone et la version d'Android.
 

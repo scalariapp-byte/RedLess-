@@ -1,13 +1,13 @@
 # Serveur Redlok sur le Raspberry Pi
 
-Un seul programme (`pi/serveur.mjs`, Node.js, sans dépendance) sert tout ce que le jeu appelle sur `https://redless.taild80a87.ts.net` :
+Un seul programme (`pi/serveur.mjs`, Node.js, sans dépendance) sert tout ce que le jeu appelle sur `https://redlok.taild80a87.ts.net` (et sur l'ancienne adresse `https://redless.taild80a87.ts.net`, gardée pour les joueurs installés avant la 3.24) :
 
 | Adresse | Contenu |
 |---|---|
 | `/` | le site (`site/`) |
 | `/jouer/` | le jeu (racine du dépôt : `index.html`, `js/`, `css/`, `audio/`…) |
 | `/version.json` | la version du jeu, lue dans `js/game.js` (bouton « Mettre à jour ») |
-| `/redless.apk` | redirige vers l'APK signé de la release GitHub (voir plus bas) |
+| `/redlok.apk` | redirige vers l'APK signé de la release GitHub (voir plus bas) ; `/redless.apk`, l'ancien nom, aussi |
 | `/auth/v1/…`, `/rest/v1/rpc/…` | l'API en ligne, aux mêmes adresses que Supabase : comptes anonymes, comptes protégés par e-mail, classement, sauvegardes, bannissements, installations |
 | `/sante` | état du serveur (pour vérifier qu'il tourne) |
 
@@ -22,7 +22,16 @@ sudo bash pi/securiser.sh     # pare-feu, SSH, fail2ban, mises à jour automatiq
 sudo bash pi/installer.sh     # le serveur, sa mise à jour automatique, Funnel
 ```
 Si Tailscale affiche un lien pour autoriser Funnel : ouvre-le, accepte, puis relance `sudo bash pi/installer.sh`.
-Si le Pi porte un autre nom dans Tailscale (par exemple « maison », qui publie déjà Cercle), l'installateur ne touche pas à son Tailscale : il lance `pi/tailscale-redless.sh`, qui donne au Pi une 2e identité Tailscale nommée **redless** (un second `tailscaled`, en mode userspace). Ouvre le lien de connexion qu'il affiche et connecte-toi avec ton compte Tailscale habituel. La console Tailscale montre alors une machine de plus, « redless ».
+Si le Pi porte un autre nom dans Tailscale (par exemple « maison », qui publie déjà Cercle), l'installateur ne touche pas à son Tailscale : il lance `pi/tailscale-identite.sh` deux fois, pour donner au Pi deux identités Tailscale de plus, **redlok** (l'adresse du jeu) et **redless** (l'ancienne, gardée pour les applis Android d'avant la 3.24, les écrans d'accueil iPhone et les liens déjà partagés). Chacune est un `tailscaled` à part, en mode userspace. Pour une identité nouvelle, ouvre le lien de connexion affiché et connecte-toi avec ton compte Tailscale habituel : la console Tailscale montre alors une machine de plus.
+
+### Passage de redless à redlok (une fois, AVANT de fusionner la 3.24 sur main)
+Le jeu 3.24 appelle `redlok.taild80a87.ts.net` : cette adresse doit exister avant que le Pi récupère la 3.24. Sur le Pi, en SSH :
+```sh
+cd ~/RedLess- && git fetch origin ccr-f234e8cf-99ev5v
+git show origin/ccr-f234e8cf-99ev5v:pi/tailscale-identite.sh > /tmp/ts.sh && sudo bash /tmp/ts.sh redlok
+curl -fsS https://redlok.taild80a87.ts.net/sante     # doit répondre comme l'ancienne adresse
+```
+L'ancienne identité « redless » continue de tourner sans changement. Ne la supprime pas : les joueurs qui ont installé le jeu depuis l'ancienne adresse y gardent leur progression (elle est rangée par adresse dans le navigateur).
 
 ## E-mails (codes « Protéger mon compte » et « Retrouver »)
 Sans réglage, tout marche sauf ces deux boutons. Avec Gmail :
@@ -57,7 +66,7 @@ scp -r ton-compte@redless:/var/lib/redless ./redless-donnees-$(date +%F)
 ```
 
 ## L'APK
-`/redless.apk` redirige vers `https://github.com/anonyme5575/redless/releases/download/latest/redless.apk`, l'APK signé avec ta clé personnelle : c'est le seul qui s'installe par-dessus l'appli des joueurs. `dist/redless.apk` du dépôt est signé avec la clé de debug, il n'est donc pas servi. Pour changer d'adresse : `APK_URL=...` dans `/etc/redless/redless.env`.
+`/redlok.apk` redirige vers `https://github.com/anonyme5575/redless/releases/download/latest/redlok.apk`, l'APK signé avec ta clé personnelle : c'est le seul qui s'installe par-dessus l'appli des joueurs. `dist/redlok.apk` du dépôt est signé avec la clé de debug, il n'est donc pas servi. Pour changer d'adresse : `APK_URL=...` dans `/etc/redless/redless.env`.
 
 ## Règles du classement (identiques à `supabase/schema.sql`)
 - Un compte anonyme par appareil ; le pseudo (2 à 14 caractères, unique sans tenir compte des majuscules) est enregistré avec les premiers points.

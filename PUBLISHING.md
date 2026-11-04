@@ -21,7 +21,7 @@ Sur la Play Console, active **Play App Signing** : Google garde la clé de signa
 export RELEASE_KEYSTORE=~/redless-release.jks RELEASE_KEY_ALIAS=redless
 read -rs RELEASE_STORE_PASSWORD && export RELEASE_STORE_PASSWORD
 VERSION_CODE=8 VERSION_NAME=2.5 NO_LICENSED_MUSIC=1 android/build.sh aab
-# -> dist/redless.aab
+# -> dist/redlok.aab
 ```
 Chaque nouvelle version envoyée doit avoir un `VERSION_CODE` plus grand.
 
@@ -34,4 +34,4 @@ Chaque nouvelle version envoyée doit avoir un `VERSION_CODE` plus grand.
 6. **Public cible** : 13 ans et plus (en dessous, le programme Familles impose des contraintes supplémentaires).
 7. **Publicités** : non.
 8. **Test fermé** : les nouveaux comptes personnels doivent faire tester l'appli par au moins 12 testeurs pendant 14 jours avant la production (règle Google en vigueur depuis fin 2023 ; vérifier l'état actuel dans la Play Console).
-9. Envoyer `dist/redless.aab` dans la piste de test, puis en production.
+9. Envoyer `dist/redlok.aab` dans la piste de test, puis en production.

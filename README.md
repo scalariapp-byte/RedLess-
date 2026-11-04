@@ -6,9 +6,9 @@ HTML/CSS/JS sans dépendance, emballé en application Android (APK pour installe
 
 ## Jouer
 
-- **Android** : installer `[dist/redless.apk](https://redless.taild80a87.ts.net/redless.apk)` (ou l'artefact du workflow « APK » dans l'onglet Actions).
+- **Android** : installer `[dist/redlok.apk](https://redlok.taild80a87.ts.net/redlok.apk)` (ou l'artefact du workflow « APK » dans l'onglet Actions).
 - **iPhone / iPad** : ouvrir le site (déployé sur Vercel) dans **Safari**, puis **Partager → Sur l'écran d'accueil**. Redlok s'installe comme une appli : plein écran, icône, fonctionne hors ligne (`sw.js`), le son joue même en mode silencieux (iOS 16.4+). Seule limite : Safari ne donne pas accès au vibreur.
-- **Navigateur** : `python3 -m [http.server 8000](https://redless.taild80a87.ts.net/redless.apk)` puis http://localhost:8000. Sur Android, Chrome propose aussi « Installer ».
+- **Navigateur** : `python3 -m [http.server 8000](https://redlok.taild80a87.ts.net/redlok.apk)` puis http://localhost:8000. Sur Android, Chrome propose aussi « Installer ».
 
 ## Serveur
 
@@ -89,8 +89,8 @@ Mise en place : **[`supabase/README.md`](supabase/README.md)** (SQL à coller : 
 ## Android
 
 ```sh
-android/build.sh            # APK  -> dist/redless.apk
-android/build.sh aab        # AAB  -> dist/redless.aab (Play Store)
+android/build.sh            # APK  -> dist/redlok.apk
+android/build.sh aab        # AAB  -> dist/redlok.aab (Play Store)
 android/release-key.sh      # crée ta clé de publication (une seule fois)
 ```
 Il faut seulement un JDK 17+, `curl`, `unzip` et `zip` : `android/fetch-tools.sh` télécharge android.jar (API 34), aapt2, d8, uber-apk-signer et bundletool. Pas besoin d'Android Studio.

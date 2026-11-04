@@ -1,29 +1,33 @@
 #!/usr/bin/env bash
-# Donne au Pi une 2e identité Tailscale nommée « redless », pour que https://redless.taild80a87.ts.net
-# mène au serveur Redlok, sans toucher au Tailscale principal du Pi ni à ce qu'il publie déjà
-# (par exemple Cercle sur https://maison.taild80a87.ts.net).
-# Un second tailscaled tourne en mode « userspace » (pas d'interface réseau), avec son propre état.
-# SUR le Pi : sudo bash pi/tailscale-redless.sh      (appelé aussi par pi/installer.sh)
+# Donne au Pi une identité Tailscale de plus, nommée NOM (par défaut « redlok »), pour que
+# https://NOM.taild80a87.ts.net mène au serveur Redlok, sans toucher au Tailscale principal du Pi
+# ni à ce qu'il publie déjà (par exemple Cercle sur https://maison.taild80a87.ts.net).
+# Chaque identité a son propre tailscaled en mode « userspace » (pas d'interface réseau) et son propre état.
+#   redlok  : l'adresse du jeu depuis la 3.24
+#   redless : l'ancienne adresse, gardée pour les applis et les écrans d'accueil installés avant
+# SUR le Pi : sudo bash pi/tailscale-identite.sh [redlok|redless]      (appelé aussi par pi/installer.sh)
 set -euo pipefail
 [ "$(id -u)" = 0 ] || { echo "Lance avec sudo."; exit 1; }
 PORT="${PORT:-8787}"
-NOM=redless
-SOCK=/run/tailscale-redless/tailscaled.sock
+NOM="${1:-redlok}"
+case "$NOM" in redless) UDP=41642 ;; redlok) UDP=41643 ;; *) UDP="${UDP:-41644}" ;; esac
+SVC="tailscaled-$NOM"
+SOCK="/run/tailscale-$NOM/tailscaled.sock"
 TS() { tailscale --socket="$SOCK" "$@"; }
 TAILSCALED=$(command -v tailscaled || echo /usr/sbin/tailscaled)
 [ -x "$TAILSCALED" ] || { echo "tailscaled introuvable : installe Tailscale d'abord."; exit 1; }
 
-echo "-- Service tailscaled-redless (2e identité Tailscale, séparée de la principale)"
-cat > /etc/systemd/system/tailscaled-redless.service <<EOF
+echo "-- Service $SVC (identité Tailscale, séparée de la principale)"
+cat > "/etc/systemd/system/$SVC.service" <<EOF
 [Unit]
 Description=Tailscale : identité « $NOM » pour le serveur Redlok
 After=network-online.target
 Wants=network-online.target
 
 [Service]
-ExecStart=$TAILSCALED --tun=userspace-networking --statedir=/var/lib/tailscale-redless --socket=$SOCK --port=41642
-RuntimeDirectory=tailscale-redless
-StateDirectory=tailscale-redless
+ExecStart=$TAILSCALED --tun=userspace-networking --statedir=/var/lib/tailscale-$NOM --socket=$SOCK --port=$UDP
+RuntimeDirectory=tailscale-$NOM
+StateDirectory=tailscale-$NOM
 StateDirectoryMode=0700
 Restart=on-failure
 RestartSec=5
@@ -32,7 +36,7 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
-systemctl enable --now tailscaled-redless
+systemctl enable --now "$SVC"
 for i in $(seq 1 20); do [ -S "$SOCK" ] && break; sleep 1; done
 
 etat() { TS status --json 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const j=JSON.parse(s);console.log(j.BackendState+" "+(j.Self&&j.Self.DNSName||"").replace(/\.$/,""))}catch{console.log("? ")}})'; }
@@ -48,7 +52,7 @@ case "$DNS" in
   "$NOM".*) ;;
   *) echo "Attention : le nom obtenu est « $DNS » et non « $NOM.… »."
      echo "Une autre machine s'appelle sans doute déjà « $NOM » dans la console Tailscale (Machines) : supprime-la ou renomme-la,"
-     echo "puis renomme celle-ci « $NOM » (… -> Edit machine name), et relance : sudo bash pi/tailscale-redless.sh" ;;
+     echo "puis renomme celle-ci « $NOM » (… -> Edit machine name), et relance : sudo bash pi/tailscale-identite.sh $NOM" ;;
 esac
 
 echo "-- Funnel : https://$DNS -> serveur Redlok (127.0.0.1:$PORT)"
