@@ -113,25 +113,27 @@ if ! command -v tailscale >/dev/null; then
   exit 0
 fi
 NOM=$(tailscale status --json 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).Self.DNSName.replace(/\.$/,""))}catch{console.log("")}})')
-if [ "$NOM" != "$ADRESSE" ]; then
-  echo "Attention : ce Pi s'appelle « ${NOM:-inconnu} » sur Tailscale, alors que le jeu appelle $ADRESSE."
-  echo "Renomme la machine « redless » dans la console Tailscale (Machines -> ... -> Edit machine name), puis relance ce script."
-fi
-ACTUEL=$(tailscale funnel status 2>/dev/null || true)
-if echo "$ACTUEL" | grep -q "127.0.0.1:$PORT"; then
-  echo "Funnel déjà réglé vers le serveur Redless."
-else
-  if echo "$ACTUEL" | grep -q "proxy\|path\|http"; then
-    echo "Funnel sert déjà autre chose :"; echo "$ACTUEL"
-    read -r -p "Le remplacer par le serveur Redless ? [o/N] " r
-    [ "$r" = o ] || [ "$r" = O ] || { echo "Funnel laissé tel quel."; exit 0; }
-    tailscale funnel reset || true
+if [ "$NOM" = "$ADRESSE" ]; then
+  # Le Pi s'appelle déjà « redless » : Funnel du Tailscale principal.
+  ACTUEL=$(tailscale funnel status 2>/dev/null || true)
+  if echo "$ACTUEL" | grep -q "127.0.0.1:$PORT"; then
+    echo "Funnel déjà réglé vers le serveur Redless."
+  else
+    if echo "$ACTUEL" | grep -q "proxy\|path\|http"; then
+      echo "Funnel sert déjà autre chose :"; echo "$ACTUEL"
+      read -r -p "Le remplacer par le serveur Redless ? [o/N] " r
+      [ "$r" = o ] || [ "$r" = O ] || { echo "Funnel laissé tel quel."; exit 0; }
+      tailscale funnel reset || true
+    fi
+    tailscale funnel --bg "$PORT" || { echo "Active Funnel avec le lien ci-dessus, puis relance : sudo bash pi/installer.sh"; exit 1; }
   fi
-  # Ouvre https://$ADRESSE (port 443) vers le serveur local. Si Funnel n'est pas encore autorisé,
-  # Tailscale affiche un lien à ouvrir pour l'activer, puis il faut relancer ce script.
-  tailscale funnel --bg "$PORT" || { echo "Active Funnel avec le lien ci-dessus, puis relance : sudo bash pi/installer.sh"; exit 1; }
+  tailscale funnel status || true
+else
+  # Le Pi a un autre nom (et publie peut-être déjà autre chose) : 2e identité Tailscale « redless »,
+  # sans toucher au Tailscale principal.
+  echo "Ce Pi s'appelle « ${NOM:-inconnu} » sur Tailscale : Redless aura sa propre identité « redless »."
+  PORT="$PORT" bash "$DIR/pi/tailscale-redless.sh"
 fi
-tailscale funnel status || true
 
 echo
 echo "Installé."
