@@ -205,7 +205,7 @@ await step("CORS : l'appli Android (origine file://) peut appeler l'API", async 
 await step("site, jeu, version.json, APK, musique par morceaux, fichiers interdits", async () => {
   const get = (p, h) => fetch(app.url + p, { headers: h, redirect: "manual" });
   const site = await get("/");
-  assert.equal(site.status, 200); assert.match(await site.text(), /Redless/);
+  assert.equal(site.status, 200); assert.match(await site.text(), /Redlok/);
   assert.equal((await get("/site.js")).status, 200);
   assert.equal((await get("/?site")).status, 200);
   const jeu = await get("/jouer/");
@@ -253,8 +253,8 @@ await step("e-mail SMTP : dialogue complet avec un serveur simulé", async () =>
     });
   });
   await new Promise((ok) => smtp.listen(0, "127.0.0.1", ok));
-  const mailer = createMailer({ SMTP_HOST: "127.0.0.1", SMTP_PORT: String(smtp.address().port), SMTP_SECURE: "0", SMTP_USER: "moi@gmail.com", SMTP_PASS: "secret", MAIL_FROM: "Redless <moi@gmail.com>" });
-  await mailer.send({ to: "joueur@exemple.fr", subject: "Redless : ton code 123456", text: "Ton code Redless : 123456 — éàü" });
+  const mailer = createMailer({ SMTP_HOST: "127.0.0.1", SMTP_PORT: String(smtp.address().port), SMTP_SECURE: "0", SMTP_USER: "moi@gmail.com", SMTP_PASS: "secret", MAIL_FROM: "Redlok <moi@gmail.com>" });
+  await mailer.send({ to: "joueur@exemple.fr", subject: "Redlok : ton code 123456", text: "Ton code Redlok : 123456 — éàü" });
   smtp.close();
   assert.ok(got.includes("MAIL FROM:<moi@gmail.com>"));
   assert.ok(got.includes("RCPT TO:<joueur@exemple.fr>"));

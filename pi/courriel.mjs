@@ -1,4 +1,4 @@
-// Envoi d'e-mails pour le serveur Redless : codes de connexion, alertes d'installation.
+// Envoi d'e-mails pour le serveur Redlok : codes de connexion, alertes d'installation.
 // Sans dépendance. Trois façons d'envoyer, choisies par les variables d'environnement :
 //   SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS  (Gmail : smtp.gmail.com, 465, mot de passe d'application)
 //   RESEND_API_KEY                                 (Resend : sans domaine vérifié, n'envoie qu'à l'adresse du compte)
@@ -13,7 +13,7 @@ import { join } from "node:path";
 const b64 = (s) => Buffer.from(s, "utf8").toString("base64");
 const wrap = (s) => s.replace(/.{1,76}/g, "$&\r\n");
 const encodeHeader = (s) => (/^[\x20-\x7e]*$/.test(s) ? s : `=?UTF-8?B?${b64(s)}?=`);
-// « Redless <a@b.fr> » -> a@b.fr
+// « Redlok <a@b.fr> » -> a@b.fr
 const bareAddress = (s) => ((/<([^>]+)>/.exec(s) || [])[1] || s).trim();
 
 function buildMessage({ from, to, subject, text }) {
@@ -121,7 +121,7 @@ export function createMailer(env = process.env) {
         const res = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: { Authorization: "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },
-          body: JSON.stringify({ from: from || "Redless <onboarding@resend.dev>", to: [to], subject, text }),
+          body: JSON.stringify({ from: from || "Redlok <onboarding@resend.dev>", to: [to], subject, text }),
         });
         if (!res.ok) throw new Error(`Resend : ${res.status} ${await res.text()}`);
       },

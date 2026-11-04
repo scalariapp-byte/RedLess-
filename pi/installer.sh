@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installe le serveur Redless sur le Raspberry Pi : site, jeu, classement, comptes, sauvegardes.
+# Installe le serveur Redlok sur le Raspberry Pi : site, jeu, classement, comptes, sauvegardes.
 # Depuis le dossier du dépôt, SUR le Pi :  sudo bash pi/installer.sh
 # Relançable sans risque : garde les données (/var/lib/redless) et les réglages (/etc/redless/redless.env).
 set -euo pipefail
@@ -23,7 +23,7 @@ install -d -o "$U" -g "$U" -m 700 "$DATA"
 install -d -o root -g "$U" -m 750 /etc/redless
 if [ ! -f "$CONF" ]; then
   cat > "$CONF" <<'EOF'
-# Réglages du serveur Redless. Après une modification : sudo systemctl restart redless
+# Réglages du serveur Redlok. Après une modification : sudo systemctl restart redless
 PORT=8787
 DATA_DIR=/var/lib/redless
 # Compte administrateur du jeu (peut bannir) et adresse qui reçoit les alertes d'installation.
@@ -38,7 +38,7 @@ NOTIFY_EMAIL=scalariapp@gmail.com
 #SMTP_PORT=465
 #SMTP_USER=scalariapp@gmail.com
 #SMTP_PASS=xxxxxxxxxxxxxxxx
-#MAIL_FROM=Redless <scalariapp@gmail.com>
+#MAIL_FROM=Redlok <scalariapp@gmail.com>
 EOF
 fi
 chown root:"$U" "$CONF"; chmod 640 "$CONF"
@@ -46,7 +46,7 @@ chown root:"$U" "$CONF"; chmod 640 "$CONF"
 echo "== 3. Service redless"
 cat > /etc/systemd/system/redless.service <<EOF
 [Unit]
-Description=Redless (site, jeu, classement en ligne)
+Description=Redlok (site, jeu, classement en ligne)
 After=network-online.target
 Wants=network-online.target
 
@@ -76,7 +76,7 @@ EOF
 echo "== 4. Mise à jour automatique depuis GitHub (toutes les 10 minutes)"
 cat > /etc/systemd/system/redless-maj.service <<EOF
 [Unit]
-Description=Redless : récupère la dernière version sur GitHub
+Description=Redlok : récupère la dernière version sur GitHub
 After=network-online.target
 
 [Service]
@@ -85,7 +85,7 @@ ExecStart=/bin/bash $DIR/pi/mettre-a-jour.sh $U
 EOF
 cat > /etc/systemd/system/redless-maj.timer <<'EOF'
 [Unit]
-Description=Redless : mise à jour toutes les 10 minutes
+Description=Redlok : mise à jour toutes les 10 minutes
 
 [Timer]
 OnBootSec=2min
@@ -117,11 +117,11 @@ if [ "$NOM" = "$ADRESSE" ]; then
   # Le Pi s'appelle déjà « redless » : Funnel du Tailscale principal.
   ACTUEL=$(tailscale funnel status 2>/dev/null || true)
   if echo "$ACTUEL" | grep -q "127.0.0.1:$PORT"; then
-    echo "Funnel déjà réglé vers le serveur Redless."
+    echo "Funnel déjà réglé vers le serveur Redlok."
   else
     if echo "$ACTUEL" | grep -q "proxy\|path\|http"; then
       echo "Funnel sert déjà autre chose :"; echo "$ACTUEL"
-      read -r -p "Le remplacer par le serveur Redless ? [o/N] " r
+      read -r -p "Le remplacer par le serveur Redlok ? [o/N] " r
       [ "$r" = o ] || [ "$r" = O ] || { echo "Funnel laissé tel quel."; exit 0; }
       tailscale funnel reset || true
     fi
@@ -131,7 +131,7 @@ if [ "$NOM" = "$ADRESSE" ]; then
 else
   # Le Pi a un autre nom (et publie peut-être déjà autre chose) : 2e identité Tailscale « redless »,
   # sans toucher au Tailscale principal.
-  echo "Ce Pi s'appelle « ${NOM:-inconnu} » sur Tailscale : Redless aura sa propre identité « redless »."
+  echo "Ce Pi s'appelle « ${NOM:-inconnu} » sur Tailscale : Redlok aura sa propre identité « redless »."
   PORT="$PORT" bash "$DIR/pi/tailscale-redless.sh"
 fi
 

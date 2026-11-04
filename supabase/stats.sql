@@ -1,5 +1,5 @@
 -- =====================================================================
--- Redless : statistiques de fréquentation (lecture seule).
+-- Redlok : statistiques de fréquentation (lecture seule).
 -- Supabase → SQL Editor → colle UNE requête à la fois → Run.
 -- Aucune donnée nouvelle n'est collectée : tout vient des tables déjà
 -- remplies par le jeu (installs, players, runs, saves, auth.users).

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Donne au Pi une 2e identité Tailscale nommée « redless », pour que https://redless.taild80a87.ts.net
-# mène au serveur Redless, sans toucher au Tailscale principal du Pi ni à ce qu'il publie déjà
+# mène au serveur Redlok, sans toucher au Tailscale principal du Pi ni à ce qu'il publie déjà
 # (par exemple Cercle sur https://maison.taild80a87.ts.net).
 # Un second tailscaled tourne en mode « userspace » (pas d'interface réseau), avec son propre état.
 # SUR le Pi : sudo bash pi/tailscale-redless.sh      (appelé aussi par pi/installer.sh)
@@ -16,7 +16,7 @@ TAILSCALED=$(command -v tailscaled || echo /usr/sbin/tailscaled)
 echo "-- Service tailscaled-redless (2e identité Tailscale, séparée de la principale)"
 cat > /etc/systemd/system/tailscaled-redless.service <<EOF
 [Unit]
-Description=Tailscale : identité « $NOM » pour le serveur Redless
+Description=Tailscale : identité « $NOM » pour le serveur Redlok
 After=network-online.target
 Wants=network-online.target
 
@@ -51,7 +51,7 @@ case "$DNS" in
      echo "puis renomme celle-ci « $NOM » (… -> Edit machine name), et relance : sudo bash pi/tailscale-redless.sh" ;;
 esac
 
-echo "-- Funnel : https://$DNS -> serveur Redless (127.0.0.1:$PORT)"
+echo "-- Funnel : https://$DNS -> serveur Redlok (127.0.0.1:$PORT)"
 if ! TS funnel status 2>/dev/null | grep -q "127.0.0.1:$PORT"; then
   TS funnel --bg "$PORT" || { echo "Si un lien s'affiche pour autoriser Funnel : ouvre-le, accepte, puis relance ce script."; exit 1; }
 fi

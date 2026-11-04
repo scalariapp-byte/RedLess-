@@ -1,4 +1,4 @@
-// Site de présentation de Redless : démo jouable, classement mondial en direct, version du jeu.
+// Site de présentation de Redlok : démo jouable, classement mondial en direct, version du jeu.
 (() => {
   "use strict";
   const $ = (s) => document.querySelector(s);

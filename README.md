@@ -1,6 +1,4 @@
-# Redless
-
-*Redless* = « sans rouge » en anglais.
+# Redlok
 
 Jeu mobile en portrait, jouable à un doigt, avec une interface de cockpit holographique. Touche les cases vertes, jamais les rouges. Les cases tombent sur les temps de la musique, et la musique accélère sans arrêt.
 
@@ -9,7 +7,7 @@ HTML/CSS/JS sans dépendance, emballé en application Android (APK pour installe
 ## Jouer
 
 - **Android** : installer `[dist/redless.apk](https://redless.taild80a87.ts.net/redless.apk)` (ou l'artefact du workflow « APK » dans l'onglet Actions).
-- **iPhone / iPad** : ouvrir le site (déployé sur Vercel) dans **Safari**, puis **Partager → Sur l'écran d'accueil**. Redless s'installe comme une appli : plein écran, icône, fonctionne hors ligne (`sw.js`), le son joue même en mode silencieux (iOS 16.4+). Seule limite : Safari ne donne pas accès au vibreur.
+- **iPhone / iPad** : ouvrir le site (déployé sur Vercel) dans **Safari**, puis **Partager → Sur l'écran d'accueil**. Redlok s'installe comme une appli : plein écran, icône, fonctionne hors ligne (`sw.js`), le son joue même en mode silencieux (iOS 16.4+). Seule limite : Safari ne donne pas accès au vibreur.
 - **Navigateur** : `python3 -m [http.server 8000](https://redless.taild80a87.ts.net/redless.apk)` puis http://localhost:8000. Sur Android, Chrome propose aussi « Installer ».
 
 ## Serveur
@@ -103,7 +101,7 @@ Publication : voir **`PUBLISHING.md`**. Tests sur téléphone : **`TESTS.md`**. 
 
 ## Droits
 
-Redless © 2026 MyBlackWhite, tous droits réservés. Les musiques « Sync or Die », « Every Scar A Shield » et « The Velvet Hour » ont été créées par MyBlackWhite avec un outil d'IA générative de Google : aucune réutilisation sans autorisation écrite. Détails dans [`COPYRIGHT.md`](COPYRIGHT.md).
+Redlok © 2026 MyBlackWhite, tous droits réservés. Les musiques « Sync or Die », « Every Scar A Shield » et « The Velvet Hour » ont été créées par MyBlackWhite avec un outil d'IA générative de Google : aucune réutilisation sans autorisation écrite. Détails dans [`COPYRIGHT.md`](COPYRIGHT.md).
 
 ## Structure
 

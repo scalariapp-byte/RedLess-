@@ -1,4 +1,4 @@
-// Serveur de Redless pour le Raspberry Pi : le site, le jeu, et l'API en ligne du jeu.
+// Serveur de Redlok pour le Raspberry Pi : le site, le jeu, et l'API en ligne du jeu.
 // Il répond aux mêmes adresses que Supabase (/auth/v1/..., /rest/v1/rpc/...), donc js/online.js
 // et site/site.js marchent sans changement. Sans dépendance : Node.js 18 ou plus.
 //
@@ -175,8 +175,8 @@ export function createApp(cfg = settings()) {
     try {
       await cfg.mailer.send({
         to: email,
-        subject: `Redless : ton code ${code}`,
-        text: `Ton code Redless : ${code}\n\nÉcris-le dans le jeu. Il est valable 15 minutes.\n\nTu n'as rien demandé ? Ignore cet e-mail : sans le code, personne ne peut utiliser ton adresse.\n\n— Redless`,
+        subject: `Redlok : ton code ${code}`,
+        text: `Ton code Redlok : ${code}\n\nÉcris-le dans le jeu. Il est valable 15 minutes.\n\nTu n'as rien demandé ? Ignore cet e-mail : sans le code, personne ne peut utiliser ton adresse.\n\n— Redlok`,
       });
     } catch (e) {
       codes.delete(email);
@@ -265,7 +265,7 @@ export function createApp(cfg = settings()) {
       authFail(400, "validation_failed", "Verify requires a verification type");
     },
     "POST /logout": async () => null,
-    "GET /health": async () => ({ name: "Redless", description: "Serveur du jeu sur le Raspberry Pi" }),
+    "GET /health": async () => ({ name: "Redlok", description: "Serveur du jeu sur le Raspberry Pi" }),
   };
 
   // ----- saisons -----
@@ -442,8 +442,8 @@ export function createApp(cfg = settings()) {
           const where = { android: "Android (APK)", ios: "iPhone / iPad (appli web)", "web-app": "Appli web installée" }[p.p_platform];
           cfg.mailer.send({
             to: cfg.notify,
-            subject: `Redless : nouvelle installation (${total} au total)`,
-            text: `Une personne vient d'installer Redless.\n\nPlateforme : ${where}\nVersion : ${db.installs[dev].version || "?"}\nDate : ${new Date().toLocaleString("fr-FR", { timeZone: "Europe/Paris" })}\nInstallations au total : ${total}\n\n— Serveur Redless (Raspberry Pi)`,
+            subject: `Redlok : nouvelle installation (${total} au total)`,
+            text: `Une personne vient d'installer Redlok.\n\nPlateforme : ${where}\nVersion : ${db.installs[dev].version || "?"}\nDate : ${new Date().toLocaleString("fr-FR", { timeZone: "Europe/Paris" })}\nInstallations au total : ${total}\n\n— Serveur Redlok (Raspberry Pi)`,
           }).catch((e) => cfg.log("e-mail d'installation :", e.message));
         }
         return true;
@@ -604,7 +604,7 @@ export function createApp(cfg = settings()) {
     if (r && r.file && /[/\\]sw\.js$/.test(r.file)) headers["Service-Worker-Allowed"] = r.file.startsWith(join(cfg.root, "site")) ? "/" : "/jouer/";
     if (r && r.file && serveFile(req, res, r.file, headers)) return;
     res.writeHead(404, { ...BASE, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" })
-      .end(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Redless</title><p style="font-family:sans-serif;padding:2em">Page introuvable. <a href="/">Site de Redless</a> · <a href="/jouer/">Jouer</a></p>`);
+      .end(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Redlok</title><p style="font-family:sans-serif;padding:2em">Page introuvable. <a href="/">Site de Redlok</a> · <a href="/jouer/">Jouer</a></p>`);
   }
 
   const server = createServer((req, res) => {
@@ -637,7 +637,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const cfg = settings();
   const app = createApp(cfg);
   app.server.listen(cfg.port, cfg.host, () => {
-    cfg.log(`Redless : http://${cfg.host}:${cfg.port}/  (jeu : ${cfg.root}, données : ${cfg.data}, e-mail : ${cfg.mailer.how})`);
+    cfg.log(`Redlok : http://${cfg.host}:${cfg.port}/  (jeu : ${cfg.root}, données : ${cfg.data}, e-mail : ${cfg.mailer.how})`);
   });
   const stop = async (sig) => { cfg.log(`${sig} : arrêt propre`); await app.close(); process.exit(0); };
   process.on("SIGTERM", () => stop("SIGTERM"));

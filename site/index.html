@@ -3,19 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Redless : touche le vert, jamais le rouge</title>
-<meta name="description" content="Redless, le jeu de réflexes en rythme : un doigt, une règle, une musique qui accélère sans fin. Gratuit, sans publicité, sur Android, iPhone et navigateur.">
+<title>Redlok : touche le vert, jamais le rouge</title>
+<meta name="description" content="Redlok, le jeu de réflexes en rythme : un doigt, une règle, une musique qui accélère sans fin. Gratuit, sans publicité, sur Android, iPhone et navigateur.">
 <meta name="theme-color" content="#040a11">
-<meta property="og:title" content="Redless : touche le vert, jamais le rouge">
+<meta property="og:title" content="Redlok : touche le vert, jamais le rouge">
 <meta property="og:description" content="Un doigt. Une règle. Une musique qui accélère sans fin. Gratuit et sans publicité.">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="Redless">
+<meta property="og:site_name" content="Redlok">
 <meta property="og:locale" content="fr_FR">
 <meta property="og:url" content="https://redless.taild80a87.ts.net/">
 <meta property="og:image" content="https://redless.taild80a87.ts.net/img/partage.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Redless : touche le vert, jamais le rouge">
+<meta property="og:image:alt" content="Redlok : touche le vert, jamais le rouge">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://redless.taild80a87.ts.net/">
 <link rel="icon" href="jouer/assets/icon-192.png">
@@ -23,8 +23,8 @@
 <link rel="preload" href="jouer/fonts/oxanium.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="site.css?v=8">
 <script>
-  // Redless installé sur l'écran d'accueil (ancienne adresse) : on va directement au jeu.
-  // Sauf si on vient du bouton « Site de Redless » du jeu (?site).
+  // Redlok installé sur l'écran d'accueil (ancienne adresse) : on va directement au jeu.
+  // Sauf si on vient du bouton « Site de Redlok » du jeu (?site).
   // Ouvert dans le jeu (cadre) : pas de bandeau, une flèche du jeu permet de revenir.
   if (window.top !== window) document.documentElement.classList.add("in-app");
   if (!new URLSearchParams(location.search).has("site") && (matchMedia("(display-mode: standalone)").matches || navigator.standalone)) location.replace("jouer/");
@@ -35,7 +35,7 @@
 <div class="rain" aria-hidden="true"></div>
 
 <header class="top">
-  <a class="brand" href="#"><span class="red">RED</span>LESS</a>
+  <a class="brand" href="#"><span class="red">RED</span>LOK</a>
   <nav>
     <a href="#regles">Le jeu</a>
     <a href="#modes">Modes</a>
@@ -51,7 +51,7 @@
   <section class="hero">
     <div class="hero-text">
       <p class="kicker">Jeu de réflexes en rythme · gratuit · sans publicité</p>
-      <h1 class="logo"><span class="red">RED</span>LESS</h1>
+      <h1 class="logo"><span class="red">RED</span>LOK</h1>
       <p class="tagline">Touche le vert. Jamais le rouge.</p>
       <p class="lead">Un doigt, une seule règle. Les cases tombent sur les temps de la musique, et la musique <strong>accélère sans fin</strong>. Au début c'est calme. Quelques minutes plus tard, tu joues à 180&nbsp;BPM et les cases commencent à mentir.</p>
       <div class="cta">
@@ -162,7 +162,7 @@
 
   <!-- ============ Télécharger ============ -->
   <section id="telecharger" class="block">
-    <h2>Télécharger Redless</h2>
+    <h2>Télécharger Redlok</h2>
     <p class="intro">Gratuit, sans publicité, et ça marche même hors ligne.</p>
     <div class="cards three">
       <article class="card dl dl-android">
@@ -174,14 +174,14 @@
         </ol>
         <a class="btn btn-go" id="apk-link" href="redless.apk" download>Télécharger l'APK</a>
         <p class="small-note">Le téléchargement bloque ? <a href="https://github.com/anonyme5575/redless/releases/download/latest/redless.apk">Lien de secours (GitHub)</a>.</p>
-        <p class="small-note">Tu avais Redless avant octobre 2026 et Android dit « Application non installée » ? Une seule fois : crée un compte dans le jeu (Réglages → Compte) pour garder ta progression, désinstalle l'ancienne version, puis installe celle-ci.</p>
+        <p class="small-note">Tu avais Redlok avant octobre 2026 et Android dit « Application non installée » ? Une seule fois : crée un compte dans le jeu (Réglages → Compte) pour garder ta progression, désinstalle l'ancienne version, puis installe celle-ci.</p>
       </article>
       <article class="card dl dl-ios">
         <h3>🍏 iPhone et iPad</h3>
         <ol>
           <li>Ouvre <b>le jeu</b> dans <b>Safari</b>.</li>
           <li>Touche <b>Partager</b> (le carré avec la flèche).</li>
-          <li>Choisis <b>« Sur l'écran d'accueil »</b> : Redless s'installe comme une app, en plein écran.</li>
+          <li>Choisis <b>« Sur l'écran d'accueil »</b> : Redlok s'installe comme une app, en plein écran.</li>
         </ol>
         <a class="btn btn-ghost" href="iphone.html">Voir le guide illustré</a>
       </article>
@@ -201,12 +201,13 @@
   <section id="nouveautes" class="block">
     <h2>Nouveautés</h2>
     <ol class="timeline">
+      <li><b>3.24</b><p>Redless s'appelle maintenant <b>Redlok</b>. Même jeu, même progression : rien à faire.</p></li>
       <li><b>3.22</b><p>Le classement mondial devient le <b>total de tous tes points</b> de la saison, additionnés par le jeu. Plus de score séparé par mode.</p></li>
-      <li><b>3.21</b><p>Le classement, les comptes et les sauvegardes sont maintenant sur le serveur de Redless (Raspberry Pi), plus chez Supabase. Rien à faire pour les joueurs.</p></li>
+      <li><b>3.21</b><p>Le classement, les comptes et les sauvegardes sont maintenant sur le serveur de Redlok (Raspberry Pi), plus chez Supabase. Rien à faire pour les joueurs.</p></li>
       <li><b>3.19 – 3.20</b><p>Nouveau menu : barre d'onglets en bas (Accueil, Niveaux, Boutique, Classement, Missions), ton pseudo et ton rang en haut. Touche ton rang pour voir tous les rangs et ce qu'ils débloquent.</p></li>
       <li><b>3.15 – 3.18</b><p>Sur l'accueil du jeu : bouton <b>Partager</b> pour envoyer le lien à tes amis, et bouton pour voir ce site sans quitter le jeu.</p></li>
       <li><b>3.14</b><p>Sur ordinateur, le jeu s'affiche dans une grande console au centre de l'écran, avec les règles et les liens autour. Rien ne change sur téléphone.</p></li>
-      <li><b>3.13</b><p>Redless a son propre serveur et son site. Les mises à jour arrivent toujours toutes seules.</p></li>
+      <li><b>3.13</b><p>Redlok a son propre serveur et son site. Les mises à jour arrivent toujours toutes seules.</p></li>
       <li><b>3.12</b><p>Nouveau tempo : départ plus doux, puis accélération <b>sans aucune limite</b>. La musique suit jusqu'à 2×, ensuite les cases tombent entre les temps.</p></li>
       <li><b>3.11</b><p>Droits et mentions des musiques au nom de MyBlackWhite.</p></li>
       <li><b>3.10</b><p>Le menu affiche combien de joueurs sont venus.</p></li>
@@ -221,7 +222,7 @@
 </main>
 
 <footer class="foot">
-  <p class="brand"><span class="red">RED</span>LESS</p>
+  <p class="brand"><span class="red">RED</span>LOK</p>
   <p>© 2026 MyBlackWhite. Jeu et musiques originales : tous droits réservés.</p>
   <p><a href="confidentialite.html">Confidentialité</a> · <a href="droits.html">Droits</a></p>
 </footer>

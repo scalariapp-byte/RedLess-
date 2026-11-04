@@ -6,21 +6,21 @@
 <meta name="theme-color" content="#040a11">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Redless">
+<meta name="apple-mobile-web-app-title" content="Redlok">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="format-detection" content="telephone=no">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="assets/icon-192.png">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
 <!-- artifact:start -->
-<title>Redless</title>
+<title>Redlok</title>
 <link rel="stylesheet" href="css/style.css">
 <!-- artifact:head-end -->
 </head>
 <body>
 <!-- Ordinateur seulement (masqué sur téléphone et dans l'app Android) : panneaux autour du jeu -->
 <aside class="desk desk-left" aria-label="Comment jouer">
-  <div class="desk-logo"><span class="t-red">Red</span>less</div>
+  <div class="desk-logo"><span class="t-red">Red</span>lok</div>
   <p class="desk-tag">Touche le vert. Jamais le rouge.</p>
   <div class="desk-card">
     <h2>Comment jouer</h2>
@@ -46,13 +46,13 @@
 
   <!-- STARTUP ANIMATION (pure CSS, under 1 s, never blocks the game) -->
   <div class="splash" id="splash" aria-hidden="true">
-    <div class="splash-logo"><span class="t-red">Red</span>less</div>
+    <div class="splash-logo"><span class="t-red">Red</span>lok</div>
     <i class="splash-bar"></i>
   </div>
 
   <!-- LOGIN: shown at startup while the player has no account -->
   <section class="screen scroll" id="login" hidden>
-    <h1 class="title login-title"><span class="t-red">Red</span>less<small class="tagline">Connexion</small></h1>
+    <h1 class="title login-title"><span class="t-red">Red</span>lok<small class="tagline">Connexion</small></h1>
     <form class="set-group login-card" id="login-form" data-frame="sm">
       <p class="srv-help" id="login-help"></p>
       <label class="login-field" id="login-name-row"><span class="label">Pseudo</span>
@@ -84,7 +84,7 @@
         <button class="icon-btn" id="btn-more" aria-label="Plus d'options" aria-expanded="false"></button>
         <div class="more-menu" id="more-menu" hidden>
           <button id="btn-settings">Réglages</button>
-          <button id="btn-site">Site de Redless</button>
+          <button id="btn-site">Site de Redlok</button>
           <button id="btn-invite">Inviter des amis</button>
         </div>
       </div>
@@ -92,7 +92,7 @@
     <div class="menu-hero" data-frame="hex">
       <div class="demo" id="demo" aria-hidden="true"></div>
     </div>
-    <h1 class="title"><span class="t-red glitch" data-text="Red">Red</span><span class="glitch" data-text="less">less</span><small class="tagline">Touche le vert. Jamais le rouge.</small></h1>
+    <h1 class="title"><span class="t-red glitch" data-text="Red">Red</span><span class="glitch" data-text="lok">lok</span><small class="tagline">Touche le vert. Jamais le rouge.</small></h1>
     <p class="visitors" id="visitors" hidden><i></i><b class="num" id="visitors-n">0</b> <span id="visitors-label">joueurs sont venus</span></p>
     <div class="install" id="install" hidden>
       <span id="install-text"></span>
@@ -387,14 +387,14 @@
     <h3 class="set-title">Aide et données</h3>
     <div class="set-group" data-frame="sm">
       <div class="set-row"><span>Décalage audio<small id="set-latency">Non calibré</small></span><button class="btn small" id="btn-calib" data-frame="sm">Calibrer</button></div>
-      <div class="set-row"><span>Site de Redless<small>Nouveautés, classement, appli</small></span><button class="btn small" id="btn-site-set" data-frame="sm">Ouvrir</button></div>
+      <div class="set-row"><span>Site de Redlok<small>Nouveautés, classement, appli</small></span><button class="btn small" id="btn-site-set" data-frame="sm">Ouvrir</button></div>
       <div class="set-row"><span>Inviter des amis<small>Envoie le lien du site</small></span><button class="btn small" id="btn-invite-set" data-frame="sm">Partager</button></div>
       <div class="set-row"><span>Tutoriel</span><button class="btn small" id="btn-tuto" data-frame="sm">Revoir</button></div>
       <div class="set-row"><span>Confidentialité</span><button class="btn small" id="btn-privacy" data-frame="sm">Lire</button></div>
       <div class="set-row"><span>Progression<small id="reset-hint">Crédits, records, achats</small></span><button class="btn small danger" id="btn-reset" data-frame="sm">Effacer</button></div>
     </div>
-    <p class="note">Version <span id="app-version">3.23</span></p>
-    <p class="note credits">Redless © 2026 <b>MyBlackWhite</b>. Tous droits réservés.<br>Musiques « Sync or Die », « Every Scar A Shield », « The Velvet Hour » : MyBlackWhite. Réutilisation interdite sans autorisation.<br>17 musiques libres (CC0, OpenGameArt) : Alexander Ehlers, Fupi, G_P, da9elb, Centurion_of_war, TAD. Merci !</p>
+    <p class="note">Version <span id="app-version">3.24</span></p>
+    <p class="note credits">Redlok © 2026 <b>MyBlackWhite</b>. Tous droits réservés.<br>Musiques « Sync or Die », « Every Scar A Shield », « The Velvet Hour » : MyBlackWhite. Réutilisation interdite sans autorisation.<br>17 musiques libres (CC0, OpenGameArt) : Alexander Ehlers, Fupi, G_P, da9elb, Centurion_of_war, TAD. Merci !</p>
   </section>
 
   <!-- CALIBRATION -->
@@ -436,14 +436,14 @@
       <span class="spacer"></span>
     </div>
     <div class="prose">
-      <p><b>Redless ne collecte ni nom, ni contact, ni position. L'adresse e-mail est facultative.</b></p>
+      <p><b>Redlok ne collecte ni nom, ni contact, ni position. L'adresse e-mail est facultative.</b></p>
       <p>Ta progression (crédits, records, réglages) reste sur ton appareil, sauf si tu protèges ton compte.</p>
       <p><b>Compte protégé (facultatif).</b> Si tu touches « Protéger » dans les Réglages, ton adresse e-mail est enregistrée sur le serveur du jeu (un serveur Raspberry Pi tenu par l'auteur du jeu, en France). Elle sert uniquement à t'envoyer un code pour retrouver ton compte, jamais à de la publicité. Ta progression (crédits, achats, records, missions) est alors sauvegardée en ligne. Les volumes, vibrations et le calibrage restent sur l'appareil.</p>
       <p><b>Classement mondial.</b> Quand tu choisis un pseudo, le jeu envoie à son serveur (un serveur Raspberry Pi tenu par l'auteur du jeu, en France) : ce pseudo, tes scores, ton niveau, ton tempo et la durée de tes parties, rattachés à un identifiant anonyme créé pour ton appareil. Ces données servent uniquement au classement. Le pseudo est visible des autres joueurs.</p>
       <p><b>Installation.</b> Au premier lancement de l'application installée, le jeu envoie une seule fois un signal anonyme : un identifiant aléatoire, la plateforme (Android, iPhone, web) et la version. Il sert uniquement à compter les installations.</p>
       <p>Pas de publicité, pas d'outil de mesure d'audience. Le jeu fonctionne sans connexion ; les scores sont envoyés au retour du réseau.</p>
       <p>Permission utilisée : <b>vibreur</b>, pour les retours haptiques. Elle se coupe dans les réglages.</p>
-      <p>Quand tu partages ton score, l'image est créée sur ton appareil et envoyée seulement à l'application que tu choisis. Sur Android 10 et plus, une copie est rangée dans Images/Redless.</p>
+      <p>Quand tu partages ton score, l'image est créée sur ton appareil et envoyée seulement à l'application que tu choisis. Sur Android 10 et plus, une copie est rangée dans Images/Redlok.</p>
       <p>Désinstaller le jeu ou « Effacer la progression » supprime les données de l'appareil. Pour faire supprimer tes scores du classement mondial, ouvre une demande sur github.com/anonyme5575/redless en indiquant ton pseudo.</p>
     </div>
   </section>
@@ -460,7 +460,7 @@
   <!-- SITE: the presentation site shown inside the game, with an arrow back to the game -->
   <div class="site-view" id="site-view" hidden>
     <button class="icon-btn site-back" id="site-back" aria-label="Retour au jeu"></button>
-    <iframe id="site-frame" title="Site de Redless"></iframe>
+    <iframe id="site-frame" title="Site de Redlok"></iframe>
   </div>
 
   <!-- BAN (admin): confirmation before banning or unbanning a player -->
@@ -491,7 +491,7 @@
   <div class="visor" aria-hidden="true"></div>
   <div class="toast" id="toast"></div>
 </div>
-<aside class="desk desk-right" aria-label="Redless sur téléphone">
+<aside class="desk desk-right" aria-label="Redlok sur téléphone">
   <div class="desk-card">
     <h2>Sur ton téléphone</h2>
     <p class="desk-small"><b>Android</b> : installe l'app, ta progression te suit avec ton compte.</p>
@@ -502,7 +502,7 @@
     <h2>Défie tes amis</h2>
     <p class="desk-small">Modes de jeu → <b>Duel</b> : un code de 5 caractères, et ton ami joue exactement la même partie que toi.</p>
   </div>
-  <a class="desk-link" href="https://redless.taild80a87.ts.net/">Découvrir Redless →</a>
+  <a class="desk-link" href="https://redless.taild80a87.ts.net/">Découvrir Redlok →</a>
 </aside>
 <script src="js/config.js"></script>
 <script src="js/levels.js"></script>

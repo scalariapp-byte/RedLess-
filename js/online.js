@@ -1,4 +1,4 @@
-// Global leaderboard on the Redless server (Raspberry Pi, same API as Supabase), over plain HTTP (no library, works offline-first).
+// Global leaderboard on the Redlok server (Raspberry Pi, same API as Supabase), over plain HTTP (no library, works offline-first).
 // Players sign in anonymously; scores go through the submit_score() function on the server,
 // which checks them. Failed sends wait in a local queue and are retried later.
 (() => {

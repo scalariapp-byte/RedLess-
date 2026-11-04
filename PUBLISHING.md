@@ -26,7 +26,7 @@ VERSION_CODE=8 VERSION_NAME=2.5 NO_LICENSED_MUSIC=1 android/build.sh aab
 Chaque nouvelle version envoyée doit avoir un `VERSION_CODE` plus grand.
 
 ## 4. Play Console
-1. Créer un compte développeur (25 $ une fois) et une application « Redless », langue par défaut français, type Jeu, gratuit.
+1. Créer un compte développeur (25 $ une fois) et une application « Redlok », langue par défaut français, type Jeu, gratuit.
 2. **Fiche du Store** : textes dans `store/fr-FR/`, icône `store/icon-512.png`, bannière `store/feature-graphic.png`, captures `store/screenshots/` (6 × 1080×1920).
 3. **Règles de confidentialité** : URL de `PRIVACY.md` sur GitHub (dépôt public) ou toute page web qui en reprend le texte.
 4. **Sécurité des données** : données collectées = **Identifiants de l'appareil ou autres** (ID anonyme), **Activité dans l'appli** (scores, parties), **Autres infos** (pseudo). Usage : fonctionnalités de l'appli. Non partagées, chiffrées en transit (HTTPS), suppression sur demande.

@@ -1,4 +1,4 @@
-# Connecter Redless à Supabase (classement mondial)
+# Connecter Redlok à Supabase (classement mondial)
 
 Durée : 10 minutes, faisable sur téléphone. Offre gratuite de Supabase suffisante.
 
@@ -76,7 +76,7 @@ Pas de mot de passe : un nouveau code à chaque fois. À régler **une seule foi
 1. Compte Google **scalariapp@gmail.com** → **Sécurité** → active la **validation en deux étapes**.
 2. Cherche **« Mots de passe des applications »** → crée-en un nommé `Supabase` → copie les 16 lettres.
 3. Supabase → **Authentication → Emails → SMTP Settings** → **Enable Custom SMTP** :
-   - Sender email : `scalariapp@gmail.com` — Sender name : `Redless`
+   - Sender email : `scalariapp@gmail.com` — Sender name : `Redlok`
    - Host : `smtp.gmail.com` — Port : `465`
    - Username : `scalariapp@gmail.com` — Password : les 16 lettres
    - **Save**.
@@ -84,15 +84,15 @@ Pas de mot de passe : un nouveau code à chaque fois. À régler **une seule foi
 (Resend ne convient pas ici sans nom de domaine à toi : il n'écrit qu'à ta propre adresse.)
 
 **c. Mettre le code dans les e-mails.** Supabase → **Authentication → Emails → Templates** :
-- **Magic Link** (sert à « Retrouver ») : sujet `Ton code Redless`, message :
+- **Magic Link** (sert à « Retrouver ») : sujet `Ton code Redlok`, message :
   ```html
-  <h2>Redless</h2>
+  <h2>Redlok</h2>
   <p>Ton code pour retrouver ton compte : <b style="font-size:24px">{{ .Token }}</b></p>
   <p>Valable 1 heure. Si tu n'as rien demandé, ignore cet e-mail.</p>
   ```
-- **Change Email Address** (sert à « Protéger ») : sujet `Ton code Redless`, message :
+- **Change Email Address** (sert à « Protéger ») : sujet `Ton code Redlok`, message :
   ```html
-  <h2>Redless</h2>
+  <h2>Redlok</h2>
   <p>Ton code pour protéger ton compte : <b style="font-size:24px">{{ .Token }}</b></p>
   <p>Valable 1 heure. Si tu n'as rien demandé, ignore cet e-mail.</p>
   ```

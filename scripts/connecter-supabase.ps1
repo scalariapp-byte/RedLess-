@@ -1,4 +1,4 @@
-﻿# Connecte Redless à Supabase : colle l'adresse du projet et la clé publique,
+﻿# Connecte Redlok à Supabase : colle l'adresse du projet et la clé publique,
 # le script vérifie tout et écrit js/online-config.js (la config livrée à tous les joueurs).
 # Lancement : double-clic sur connecter-supabase.cmd (à la racine du projet).
 $ErrorActionPreference = 'Stop'
@@ -87,7 +87,7 @@ function Tester($url, $key) {
 }
 
 Write-Host ''
-Write-Host '=== Connecter Redless à Supabase ===' -ForegroundColor Cyan
+Write-Host '=== Connecter Redlok à Supabase ===' -ForegroundColor Cyan
 $actuel = ''
 if (Test-Path $fichier) { $actuel = Get-Content $fichier -Raw -Encoding UTF8 }
 $cfg = Lire-Texte $actuel

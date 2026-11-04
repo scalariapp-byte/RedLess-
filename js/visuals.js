@@ -302,12 +302,12 @@
     c.shadowBlur = 0;
 
     c.textAlign = "center"; c.fillStyle = col.ink;
-    // "REDLESS" with "RED" in red, centred as one word.
+    // "REDLOK" with "RED" in red, centred as one word.
     c.font = "800 150px Oxanium, sans-serif";
-    const wRed = c.measureText("RED").width, wLess = c.measureText("LESS").width, xt = (W - wRed - wLess) / 2;
+    const wRed = c.measureText("RED").width, wLess = c.measureText("LOK").width, xt = (W - wRed - wLess) / 2;
     c.textAlign = "left";
     c.fillStyle = col.red; c.shadowColor = col.red; c.shadowBlur = 26; c.fillText("RED", xt, 290);
-    c.fillStyle = col.ink; c.shadowColor = col.holo; c.shadowBlur = 18; c.fillText("LESS", xt + wRed, 290);
+    c.fillStyle = col.ink; c.shadowColor = col.holo; c.shadowBlur = 18; c.fillText("LOK", xt + wRed, 290);
     c.shadowBlur = 0; c.textAlign = "center";
     c.fillStyle = col.muted; c.font = "600 34px 'Chakra Petch', sans-serif";
     c.fillText("TOUCHE LE VERT · JAMAIS LE ROUGE", W / 2, 360);

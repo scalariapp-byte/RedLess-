@@ -53,10 +53,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          name: Redless (dernière version)
+          name: Redlok (dernière version)
           body: |
-            Dernière version de Redless pour Android. Télécharge redless.apk et installe-le par-dessus l'ancien : ta progression est gardée.
+            Dernière version de Redlok pour Android. Télécharge redless.apk et installe-le par-dessus l'ancien : ta progression est gardée.
 
-            Tu avais installé Redless avant octobre 2026 et Android affiche « Application non installée » ? Une seule fois : crée un compte dans le jeu (Réglages → Compte) pour garder ta progression, désinstalle l'ancienne Redless, puis installe celle-ci.
+            Tu avais installé Redlok avant octobre 2026 et Android affiche « Application non installée » ? Une seule fois : crée un compte dans le jeu (Réglages → Compte) pour garder ta progression, désinstalle l'ancienne Redlok, puis installe celle-ci.
           files: dist/redless.apk
           make_latest: true

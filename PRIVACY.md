@@ -1,8 +1,8 @@
-# Politique de confidentialité — Redless
+# Politique de confidentialité — Redlok
 
 Dernière mise à jour : 6 octobre 2026
 
-**Redless ne collecte ni nom, ni contact, ni position, ni publicité. L'adresse e-mail est facultative.**
+**Redlok ne collecte ni nom, ni contact, ni position, ni publicité. L'adresse e-mail est facultative.**
 
 ## Ce qui reste sur ton appareil
 Crédits, records, réglages, progression des missions : stockés sur l'appareil, sauf si tu protèges ton compte (ci-dessous).
@@ -30,7 +30,7 @@ Au premier lancement de l'application installée (APK Android, ou appli ajoutée
 - **Vibreur** : retours haptiques (désactivable dans Réglages).
 
 ## Partage du score
-L'image est créée sur ton appareil et transmise seulement à l'application que tu choisis. Sur Android 10 et plus, une copie est rangée dans `Images/Redless`.
+L'image est créée sur ton appareil et transmise seulement à l'application que tu choisis. Sur Android 10 et plus, une copie est rangée dans `Images/Redlok`.
 
 ## Suppression
 - Sur l'appareil : Réglages → Progression → Effacer, ou désinstaller le jeu.

@@ -4,7 +4,7 @@
   const LV = NT.levels;
   const { Music, MenuMusic, Synth, haptic } = NT;
   const fx = NT.fx;
-  const VERSION = "3.23";
+  const VERSION = "3.24";
 
   // ---------- storage (may be unavailable) ----------
   const KEY = "ntplr-save-v1";
@@ -1966,7 +1966,7 @@
   // ---------- share ----------
   function shareText() {
     const what = G.modeId === "duel" ? `en Duel (code ${G.code})` : G.modeId === "daily" ? `au Défi du jour du ${fmtDate()}` : `en ${G.M.name}`;
-    return `J'ai fait ${G.score} ${what} sur Redless, à ${Math.round(G.bpmNow)} BPM. Tu fais mieux ?`;
+    return `J'ai fait ${G.score} ${what} sur Redlok, à ${Math.round(G.bpmNow)} BPM. Tu fais mieux ?`;
   }
   async function shareRun() {
     if (!G) return;
@@ -1990,11 +1990,11 @@
   async function shareGame() {
     sfx("ui");
     const link = "https://redless.taild80a87.ts.net/";
-    const text = "Viens jouer à Redless ! Touche le vert, jamais le rouge. C'est gratuit :";
+    const text = "Viens jouer à Redlok ! Touche le vert, jamais le rouge. C'est gratuit :";
     const n = NT.native();
     if (n && n.shareText) { n.shareText(`${text} ${link}`); return; }
     if (navigator.share) {
-      try { await navigator.share({ title: "Redless", text, url: link }); return; }
+      try { await navigator.share({ title: "Redlok", text, url: link }); return; }
       catch (e) { if (e && e.name === "AbortError") return; }
     }
     try { await navigator.clipboard.writeText(`${text} ${link}`); toast("Lien copié, colle-le à tes amis"); }
@@ -2072,8 +2072,8 @@
     $("#install").hidden = false;
     fx.initFrames($("#install"));
   }
-  if (isIOS && !standalone) showInstall("Installe Redless : <b>Partager</b> puis <b>Sur l'écran d'accueil</b>. Il marchera en plein écran et hors ligne.", false);
-  window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installPrompt = e; showInstall("Installe Redless sur ton téléphone : plein écran et hors ligne.", true); });
+  if (isIOS && !standalone) showInstall("Installe Redlok : <b>Partager</b> puis <b>Sur l'écran d'accueil</b>. Il marchera en plein écran et hors ligne.", false);
+  window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installPrompt = e; showInstall("Installe Redlok sur ton téléphone : plein écran et hors ligne.", true); });
   $("#btn-install").onclick = async () => { if (!installPrompt) return; installPrompt.prompt(); try { await installPrompt.userChoice; } catch {} installPrompt = null; $("#install").hidden = true; };
   $("#btn-install-close").onclick = () => { $("#install").hidden = true; try { localStorage.setItem("redless-install-hidden", "1"); } catch {} };
 

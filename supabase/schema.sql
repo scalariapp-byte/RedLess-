@@ -1,5 +1,5 @@
 -- =====================================================================
--- Redless : classement mondial et événement mensuel (Supabase / Postgres)
+-- Redlok : classement mondial et événement mensuel (Supabase / Postgres)
 -- À coller tel quel dans Supabase → SQL Editor → Run. Ré-exécutable.
 --
 -- Règles :
@@ -278,10 +278,10 @@ begin
     url := 'https://api.resend.com/emails',
     headers := jsonb_build_object('Authorization', 'Bearer ' || api_key, 'Content-Type', 'application/json'),
     body := jsonb_build_object(
-      'from', 'Redless <onboarding@resend.dev>',
+      'from', 'Redlok <onboarding@resend.dev>',
       'to', jsonb_build_array(cfg.notify_email),
-      'subject', format('Redless : nouvelle installation (%s au total)', total),
-      'text', format(E'Une personne vient d''installer Redless.\n\nPlateforme : %s\nVersion : %s\nDate : %s (UTC)\nInstallations au total : %s\n\n— Supabase, projet Redless',
+      'subject', format('Redlok : nouvelle installation (%s au total)', total),
+      'text', format(E'Une personne vient d''installer Redlok.\n\nPlateforme : %s\nVersion : %s\nDate : %s (UTC)\nInstallations au total : %s\n\n— Supabase, projet Redlok',
                      case p_platform when 'android' then 'Android (APK)' when 'ios' then 'iPhone / iPad (appli web)' else 'Appli web installée' end,
                      coalesce(nullif(p_version, ''), '?'),
                      to_char(now() at time zone 'UTC', 'DD/MM/YYYY HH24:MI'),

@@ -1,4 +1,4 @@
-# Serveur Redless sur le Raspberry Pi
+# Serveur Redlok sur le Raspberry Pi
 
 Un seul programme (`pi/serveur.mjs`, Node.js, sans dépendance) sert tout ce que le jeu appelle sur `https://redless.taild80a87.ts.net` :
 
@@ -27,7 +27,7 @@ Si le Pi porte un autre nom dans Tailscale (par exemple « maison », qui publie
 ## E-mails (codes « Protéger mon compte » et « Retrouver »)
 Sans réglage, tout marche sauf ces deux boutons. Avec Gmail :
 1. Compte Google → Sécurité → active la **Validation en deux étapes**.
-2. Puis **Mots de passe des applications** → crée-en un nommé « Redless » → copie les 16 lettres.
+2. Puis **Mots de passe des applications** → crée-en un nommé « Redlok » → copie les 16 lettres.
 3. Sur le Pi : `sudo nano /etc/redless/redless.env`, enlève les `#` devant les lignes `SMTP_…` et `MAIL_FROM`, colle le mot de passe dans `SMTP_PASS`.
 4. `sudo systemctl restart redless`, puis `curl -s http://127.0.0.1:8787/sante` : la ligne `email` doit afficher `SMTP smtp.gmail.com:465`.
 

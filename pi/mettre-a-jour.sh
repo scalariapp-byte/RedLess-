@@ -11,7 +11,7 @@ before=$(as_user git -C "$DIR" rev-parse HEAD)
 as_user git -C "$DIR" pull --ff-only --quiet origin main || { echo "Mise à jour impossible (modification locale ?) : git -C $DIR status"; exit 1; }
 after=$(as_user git -C "$DIR" rev-parse HEAD)
 [ "$before" = "$after" ] && exit 0
-echo "Redless : $before -> $after"
+echo "Redlok : $before -> $after"
 # Le site et le jeu sont lus sur le disque à chaque demande : seul le code du serveur demande un redémarrage.
 if ! as_user git -C "$DIR" diff --quiet "$before" "$after" -- pi/serveur.mjs pi/courriel.mjs; then
   systemctl restart redless

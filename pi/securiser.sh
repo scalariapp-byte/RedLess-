@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Durcit le Raspberry Pi qui sert Redless. À lancer SUR le Pi : sudo bash pi/securiser.sh
+# Durcit le Raspberry Pi qui sert Redlok. À lancer SUR le Pi : sudo bash pi/securiser.sh
 # Sans risque de perdre l'accès : SSH reste ouvert sur le réseau local et via Tailscale,
 # et les mots de passe SSH ne sont coupés que si une clé SSH est déjà installée.
 set -euo pipefail
