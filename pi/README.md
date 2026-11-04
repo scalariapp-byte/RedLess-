@@ -22,7 +22,7 @@ sudo bash pi/securiser.sh     # pare-feu, SSH, fail2ban, mises à jour automatiq
 sudo bash pi/installer.sh     # le serveur, sa mise à jour automatique, Funnel
 ```
 Si Tailscale affiche un lien pour autoriser Funnel : ouvre-le, accepte, puis relance `sudo bash pi/installer.sh`.
-La machine doit s'appeler **redless** dans Tailscale (sinon l'adresse n'est pas `redless.taild80a87.ts.net`) : le script le vérifie.
+Si le Pi porte un autre nom dans Tailscale (par exemple « maison », qui publie déjà Cercle), l'installateur ne touche pas à son Tailscale : il lance `pi/tailscale-redless.sh`, qui donne au Pi une 2e identité Tailscale nommée **redless** (un second `tailscaled`, en mode userspace). Ouvre le lien de connexion qu'il affiche et connecte-toi avec ton compte Tailscale habituel. La console Tailscale montre alors une machine de plus, « redless ».
 
 ## E-mails (codes « Protéger mon compte » et « Retrouver »)
 Sans réglage, tout marche sauf ces deux boutons. Avec Gmail :
