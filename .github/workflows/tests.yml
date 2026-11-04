@@ -28,3 +28,5 @@ jobs:
         run: node tests/chaos.test.mjs
       - name: Tempo (départ lent, croissance exponentielle sans plafond)
         run: node tests/tempo.test.mjs
+      - name: Serveur du Raspberry Pi (API Supabase, fichiers, e-mails, jeu branché dessus)
+        run: node tests/serveur.test.mjs
