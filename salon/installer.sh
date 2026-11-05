@@ -23,7 +23,7 @@ utilisateur="$(id -un)"
 
 echo "== 1/4 Paquets"
 sudo apt-get update -qq
-sudo apt-get install -y python3-pygame mpv x11-xserver-utils
+sudo apt-get install -y python3-pygame mpv x11-xserver-utils fonts-inter
 # Décodage vidéo par la puce graphique (Intel) : indispensable pour la 1080p sur un Celeron.
 sudo apt-get install -y -qq i965-va-driver intel-media-va-driver >/dev/null 2>&1 || true
 if ! sudo apt-get install -y retroarch; then

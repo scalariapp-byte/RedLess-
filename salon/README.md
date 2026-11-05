@@ -4,13 +4,17 @@ Interface plein écran pour un petit PC Ubuntu : **films, chaînes TV, jeux rét
 
 Elle est faite pour les machines faibles (Celeron, 2 à 4 Go de mémoire).
 
+![Accueil](captures/accueil.png)
+![Système](captures/systeme.png)
+![Liste](captures/liste.png)
+
 ## Ce qui a été optimisé (mesuré)
 
 | Mesure | Avant | Après | Comment |
 |---|---|---|---|
-| Mémoire de Salon | 58 Mo | **38 Mo** | modules inutiles de pygame bloqués (numpy, son…), mini-serveur HTTP fait main, téléchargement des chaînes chargé seulement à l'usage |
+| Mémoire de Salon | 58 Mo | **48 Mo** (38 Mo avant la nouvelle interface ; +10 Mo de formes lissées, fonds et police Inter gardés en cache) | modules inutiles de pygame bloqués (numpy, son…), mini-serveur HTTP fait main, téléchargement des chaînes chargé seulement à l'usage |
 | Processeur au repos | 3 % | **0,4 %** | boucle qui dort entre deux vérifications : l'attente de SDL se réveille 1 000 fois par seconde dès qu'une manette est branchée |
-| Une image à l'écran | 2,3 ms | 2,3 ms | rien n'est redessiné tant que rien ne change |
+| Une image à l'écran | | 2 à 4 ms | rien n'est redessiné tant que rien ne change ; formes lissées calculées une fois puis gardées ; animations de 150 ms seulement après une action |
 
 Le reste :
 - **mpv** décode la vidéo avec la puce graphique et garde 32 Mo d'avance sur le réseau, au lieu de 150 Mo par défaut ;
