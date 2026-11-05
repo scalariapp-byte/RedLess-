@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-"""Salon : films, chaînes TV, jeux rétro et infos du PC, en plein écran.
+"""Salon : jeux rétro, Netflix et infos du PC, en plein écran.
 
-Pilotable au clavier, à la manette, au tactile et depuis un téléphone
-(page web servie sur le port 8765). Conçu pour les petits PC : rien n'est
-redessiné tant que rien ne change, la vidéo passe par mpv et les jeux par
-RetroArch, lancés seulement quand on en a besoin.
+Pilotable au clavier, à la manette, au tactile et depuis un téléphone (page web
+sur le port 8765, qui sert aussi à envoyer des jeux). Conçu pour les petits PC :
+rien n'est redessiné tant que rien ne change, et pendant un jeu ou Netflix Salon
+rend au système presque toute sa mémoire.
 """
 
 import json
 import math
 import os
 import re
+import gc
 import shutil
 import signal
 import socket
@@ -23,7 +24,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
-# La manette doit rester lue quand mpv est devant (pause, volume, quitter).
+# La manette doit rester lue quand le jeu ou Netflix est devant (Select + Start pour quitter).
 os.environ.setdefault("SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS", "1")
 # pygame charge d'office numpy, le son et d'autres modules dont Salon ne se sert pas :
 # les bloquer économise environ 18 Mo de mémoire (pygame les remplace par des modules vides).
@@ -38,39 +39,18 @@ ACCUEIL_DIR = Path.home()
 CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME") or ACCUEIL_DIR / ".config") / "salon"
 CONFIG_FICHIER = CONFIG_DIR / "config.json"
 RUNTIME = Path(os.environ.get("XDG_RUNTIME_DIR") or "/tmp")
-MPV_SOCKET = RUNTIME / "salon-mpv.sock"
-PLAYLIST_TV = RUNTIME / "salon-chaines.m3u"
-
-
-def dossier_videos():
-    """Dossier « Vidéos » de l'utilisateur (son nom dépend de la langue)."""
-    try:
-        for ligne in (ACCUEIL_DIR / ".config/user-dirs.dirs").read_text().splitlines():
-            if ligne.startswith("XDG_VIDEOS_DIR="):
-                return ligne.split("=", 1)[1].strip('"').replace("$HOME", str(ACCUEIL_DIR))
-    except OSError:
-        pass
-    return str(ACCUEIL_DIR / "Vidéos")
 
 
 DEFAUTS = {
-    "films": [dossier_videos()],
-    # Chaînes gratuites et diffusées légalement en clair, recensées par iptv-org.
-    "chaines": "https://iptv-org.github.io/iptv/countries/fr.m3u",
     "roms": str(ACCUEIL_DIR / "ROMs"),
     "retroarch": "retroarch",
     "cores_dir": "",
-    # Décodage par la puce graphique, petit tampon réseau (150 Mo par défaut dans mpv).
-    "mpv": ["mpv", "--fs", "--hwdec=auto-safe", "--really-quiet", "--ytdl=no",
-            "--demuxer-max-bytes=32MiB", "--demuxer-max-back-bytes=8MiB"],
     "port_telecommande": 8765,
     "ecran_retourne": False,
     "netflix": "https://www.netflix.com/browse",
     # Navigateurs capables de lire les vidéos protégées (DRM), essayés dans l'ordre.
     "navigateur": "",
 }
-ANCIEN_MPV = ["mpv", "--fs", "--hwdec=auto-safe", "--really-quiet"]
-
 # Réglages de RetroArch pour un petit processeur, ajoutés par-dessus les siens à chaque lancement.
 RETROARCH_LEGER = """\
 video_threaded = "true"
@@ -99,7 +79,9 @@ SYSTEMES = [
     ("n64", "Nintendo 64", ["mupen64plus_next_libretro", "parallel_n64_libretro"], ".n64 .z64 .v64 .zip"),
 ]
 
-EXT_VIDEO = set(".mkv .mp4 .avi .mov .webm .m4v .mpg .mpeg .ts .wmv .flv .ogv".split())
+NOMS = {d: n for d, n, _, _ in SYSTEMES}
+# Fichiers acceptés à l'envoi depuis le téléphone (les .bin des jeux PS1 accompagnent leur .cue).
+EXT_ENVOI = {d: set(ext.split()) | ({".bin"} if d == "psx" else set()) for d, _, _, ext in SYSTEMES}
 
 ACTIONS = {"haut", "bas", "gauche", "droite", "ok", "retour", "accueil",
            "pause", "avance", "recul", "vol+", "vol-", "stop"}
@@ -123,6 +105,7 @@ ROSE = (240, 80, 150)
 
 EV_TELE = pygame.USEREVENT + 1     # action venue du téléphone
 EV_REVEIL = pygame.USEREVENT + 2   # une tâche de fond a fini : redessiner
+EV_JEU = pygame.USEREVENT + 3      # un jeu vient d'arriver depuis le téléphone
 
 
 # ---------------------------------------------------------------- configuration
@@ -135,8 +118,6 @@ def charger_config():
         pass
     except (OSError, ValueError) as e:
         print(f"salon : {CONFIG_FICHIER} illisible ({e}), réglages par défaut", file=sys.stderr)
-    if cfg.get("mpv") == ANCIEN_MPV:  # fichier écrit par la 1re version : on reprend les nouveaux réglages
-        cfg["mpv"] = DEFAUTS["mpv"]
     return cfg
 
 
@@ -176,21 +157,11 @@ def taille_lisible(octets):
         octets /= 1024
 
 
-def lire_m3u(texte):
-    """Liste de (nom, groupe, url) à partir d'une playlist M3U."""
-    chaines, nom, groupe = [], None, ""
-    for ligne in texte.splitlines():
-        ligne = ligne.strip()
-        if ligne.startswith("#EXTINF"):
-            # Le nom suit la première virgule hors des attributs entre guillemets.
-            m = re.match(r'#EXTINF:[^,"]*(?:"[^"]*"[^,"]*)*,(.*)', ligne)
-            nom = m.group(1).strip() if m else None
-            m = re.search(r'group-title="([^"]*)"', ligne)
-            groupe = m.group(1) if m else ""
-        elif ligne and not ligne.startswith("#"):
-            chaines.append((nom or ligne, groupe, ligne))
-            nom, groupe = None, ""
-    return chaines
+def deviner_console(nom):
+    """Console d'après l'extension, quand une seule console l'utilise (.sfc → snes ; .zip → ?)."""
+    ext = Path(nom).suffix.lower()
+    possibles = [d for d, e in EXT_ENVOI.items() if ext in e]
+    return possibles[0] if len(possibles) == 1 else None
 
 
 def adresse_ip():
@@ -357,17 +328,9 @@ def dessiner_icone(s, nom, centre, r, couleur):
     ligne = lambda a, b: pygame.draw.line(s, couleur, a, b, int(e))  # noqa: E731
     point = lambda p, rr: pygame.draw.circle(s, couleur, p, rr)  # noqa: E731
     vide = (*couleur[:3], 0)
-    if nom == "films":
-        arc_plein(s, couleur, (cx, cy), r, r - e, 0, 2 * math.pi, False)
-        pygame.draw.polygon(s, couleur, [(cx - r * 0.28, cy - r * 0.42), (cx - r * 0.28, cy + r * 0.42), (cx + r * 0.46, cy)])
-    elif nom == "video":
+    if nom == "video":
         pygame.draw.rect(s, couleur, (cx - r, cy - r * 0.72, 2 * r, 1.44 * r), int(e), border_radius=int(r * 0.22))
         pygame.draw.polygon(s, couleur, [(cx - r * 0.25, cy - r * 0.36), (cx - r * 0.25, cy + r * 0.36), (cx + r * 0.38, cy)])
-    elif nom == "tv":
-        pygame.draw.rect(s, couleur, (cx - r, cy - r * 0.5, 2 * r, 1.35 * r), int(e), border_radius=int(r * 0.2))
-        ligne((cx, cy - r * 0.5), (cx - r * 0.42, cy - r * 0.98))
-        ligne((cx, cy - r * 0.5), (cx + r * 0.42, cy - r * 0.98))
-        ligne((cx - r * 0.45, cy + r * 1.05), (cx + r * 0.45, cy + r * 1.05))
     elif nom in ("jeux", "jeu"):
         pygame.draw.rect(s, couleur, (cx - r * 1.1, cy - r * 0.62, 2.2 * r, 1.24 * r), int(e), border_radius=int(r * 0.6))
         gx = cx - r * 0.52
@@ -497,7 +460,8 @@ class Pinceau:
         return self._garder("carte", (w, h, r, couleur, alpha, haut, bord), fabrique)
 
     def halo(self, w, h, r, couleur, force=150):
-        """Lueur floue autour d'un rectangle ; renvoie (surface, marge)."""
+        """Lueur floue autour d'un rectangle ; renvoie (surface, marge). Gardée en demi-résolution
+        (4 fois moins de mémoire) puis agrandie à l'affichage : invisible sur un flou."""
         w, h = int(w), int(h)
         marge = int(min(w, h) * 0.35)
 
@@ -511,8 +475,9 @@ class Pinceau:
             for _ in range(3):  # flou : réduire puis agrandir
                 petit = pygame.transform.smoothscale(petit, (max(1, pw // 3), max(1, ph // 3)))
                 petit = pygame.transform.smoothscale(petit, (pw, ph))
-            return pygame.transform.smoothscale(petit, (w + 2 * marge, h + 2 * marge))
-        return self._garder("halo", (w, h, int(r), couleur, force), fabrique, 12), marge
+            return pygame.transform.smoothscale(petit, ((w + 2 * marge) // 2, (h + 2 * marge) // 2))
+        demi = self._garder("halo", (w, h, int(r), couleur, force), fabrique, 4)
+        return pygame.transform.scale(demi, (w + 2 * marge, h + 2 * marge)), marge
 
     def disque(self, rayon, couleur, alpha=255):
         t = max(2, int(rayon * 2))
@@ -696,14 +661,12 @@ class Accueil(Ecran):
         super().__init__(app)
         self.sel = 0
         self.tuiles = [
-            ("Films", ROUGE, "films", app.ouvrir_films),
-            ("Netflix", ROSE, "video", app.ouvrir_netflix),
-            ("Chaînes TV", BLEU, "tv", app.ouvrir_tv),
             ("Jeux", VERT, "jeux", app.ouvrir_jeux),
+            ("Netflix", ROSE, "video", app.ouvrir_netflix),
             ("Système", ORANGE, "systeme", app.ouvrir_systeme),
             ("Options", VIOLET, "options", app.ouvrir_options),
         ]
-        self.details = ["", "Dans Chrome", "Chaînes gratuites", "", "", "Écran, veille, arrêt"]
+        self.details = ["", "Dans Chrome", "", "Écran, veille, arrêt"]
         self.puces = []
         self._compteur = 0
 
@@ -736,18 +699,9 @@ class Accueil(Ecran):
                 self.tuiles[i][3]()
 
     def compter(self):
-        app = self.app
-        films = 0
-        for dossier in app.cfg.get("films", []):
-            try:
-                films += sum(1 for e in os.scandir(Path(dossier).expanduser())
-                             if not e.name.startswith(".") and (e.is_dir() or Path(e.name).suffix.lower() in EXT_VIDEO))
-            except OSError:
-                pass
-        racine = Path(app.cfg.get("roms", "~/ROMs")).expanduser()
+        racine = Path(self.app.cfg.get("roms", "~/ROMs")).expanduser()
         jeux = sum(len(App.lister_jeux(racine / d, ext)) for d, _, _, ext in SYSTEMES)
-        self.details[0] = f"{films} élément{'s' if films > 1 else ''}" if films else "Dossier vide"
-        self.details[3] = f"{jeux} jeu{'x' if jeux > 1 else ''}" if jeux else "Aucun jeu"
+        self.details[0] = f"{jeux} jeu{'x' if jeux > 1 else ''}" if jeux else "Aucun jeu"
 
     def tick(self):
         self._compteur += 1
@@ -768,7 +722,7 @@ class Accueil(Ecran):
         if b:
             puces.append(("batterie", f"{b[0]} %"))
         self.puces = puces
-        self.details[4] = f"Processeur {cpu:.0f} %" + (f" · {t:.0f} °C" if t else "")
+        self.details[2] = f"Processeur {cpu:.0f} %" + (f" · {t:.0f} °C" if t else "")
         return True
 
     def dessiner(self, s):
@@ -796,14 +750,15 @@ class Accueil(Ecran):
                 blanc = p.disque(badge, TEXTE, 60)
                 blanc.set_alpha(int(255 * levee))
                 s.blit(blanc, (cx - badge, cy - badge))
-            ic = p.icone(icone, badge * 1.1, melange(couleur, TEXTE, levee))
+            vif = levee > 0.5  # deux états seulement : pas une nouvelle teinte en cache à chaque image
+            ic = p.icone(icone, badge * 1.1, TEXTE if vif else couleur)
             s.blit(ic, ic.get_rect(center=(cx, cy)))
-            couleur_txt = melange(melange(TEXTE_DIM, TEXTE, 0.6), TEXTE, levee)
+            couleur_txt = TEXTE if vif else melange(TEXTE_DIM, TEXTE, 0.6)
             app.texte(s, nom, int(4.2 * u), (cx, r.y + r.h * 0.72 + dy), couleur_txt, centre=True, poids="sb",
                       largeur=r.w - 2 * u)
             if self.details[i]:
                 app.texte(s, self.details[i], int(2.7 * u), (cx, r.y + r.h * 0.84 + dy),
-                          melange(TEXTE_DIM, TEXTE, 0.35 * levee), centre=True, poids="m", largeur=r.w - 2.4 * u)
+                          melange(TEXTE_DIM, TEXTE, 0.35) if vif else TEXTE_DIM, centre=True, poids="m", largeur=r.w - 2.4 * u)
         # Points sous les tuiles
         n = len(self.tuiles)
         y = rects[0].bottom + 5 * u
@@ -945,7 +900,7 @@ class App:
         self._fonds = {}
         self._anims = {}
         self.anime = False
-        self.accent = ROUGE
+        self.accent = VERT
         self.pile = [Accueil(self)]
         self.pile[0].tick()
         self.sale = True
@@ -992,7 +947,7 @@ class App:
         cle = (texte, taille, couleur, poids)
         img = self._textes.get(cle)
         if img is None:
-            if len(self._textes) > 300:
+            if len(self._textes) > 150:
                 self._textes.clear()
             img = self._textes[cle] = self.police(taille, poids).render(texte, True, couleur)
         return img
@@ -1040,17 +995,23 @@ class App:
         return v
 
     def fond_ecran(self):
-        """Dégradé sombre éclairé par la couleur de la section. Chaque couleur est gardée en
-        demi-résolution (1 Mo) ; seul le fond affiché existe en pleine taille."""
+        """Dégradé sombre éclairé par la couleur de la section. Chaque couleur est gardée au quart
+        de la résolution (0,25 Mo) ; seul le fond affiché existe en pleine taille."""
         if self._fond[0] != self.accent:
-            moitie = self._fonds.get(self.accent)
-            if moitie is None:
-                moitie = self._fonds[self.accent] = self._fabriquer_fond()
-            fond = pygame.transform.scale(moitie, (self.W, self.H))
-            try:
-                fond = fond.convert()
-            except pygame.error:
-                pass
+            quart = self._fonds.get(self.accent)
+            if quart is None:
+                quart = self._fabriquer_fond()
+                try:
+                    quart = quart.convert()  # au format de l'écran dès le départ : aucune conversion ensuite
+                except pygame.error:
+                    pass
+                self._fonds[self.accent] = quart
+            # Lissage jusqu'à mi-taille puis doublement : 3 fois plus rapide qu'un lissage plein écran,
+            # et sans différence visible sur un dégradé.
+            moitie = pygame.transform.smoothscale(quart, (self.W // 2, self.H // 2))
+            fond = pygame.transform.scale2x(moitie)
+            if fond.get_size() != (self.W, self.H):  # dimensions impaires
+                fond = pygame.transform.scale(fond, (self.W, self.H))
             self._fond = (self.accent, fond)
         return self._fond[1]
 
@@ -1065,7 +1026,7 @@ class App:
                 lueur2 = max(0.0, 1 - ((x - pw) / 15) ** 2 - ((y - ph) / 9) ** 2) ** 2
                 c = melange(c, melange(self.accent, BLEU, 0.5), 0.10 * lueur2)
                 petit.set_at((x, y), c)
-        return pygame.transform.smoothscale(petit, (self.W // 2, self.H // 2))
+        return pygame.transform.smoothscale(petit, (self.W // 4, self.H // 4))  # flou : le quart suffit
 
     def puce(self, s, x, y, icone, texte, couleur=TEXTE_DIM):
         """Petite étiquette arrondie avec icône ; renvoie sa largeur."""
@@ -1169,88 +1130,6 @@ class App:
                           compteur=False))
         self.pile[-1].sel = 1
 
-    # Films
-    def ouvrir_films(self):
-        racines = [Path(p).expanduser() for p in self.cfg.get("films", [])]
-        racines = [p for p in racines if p.is_dir()]
-        if len(racines) == 1:
-            self.ouvrir_dossier(racines[0], "Films")
-            return
-        elements = [(p.name or str(p), str(p.parent), lambda p=p: self.ouvrir_dossier(p)) for p in racines]
-        self.ouvrir(Liste(self, "Films", elements,
-                          "Aucun dossier de films trouvé. Mets tes vidéos dans ~/Vidéos, "
-                          "ou indique leurs dossiers dans ~/.config/salon/config.json.", "dossier"), ROUGE)
-
-    def ouvrir_dossier(self, dossier, titre=None):
-        dossiers, fichiers = [], []
-        try:
-            for e in os.scandir(dossier):
-                if e.name.startswith("."):
-                    continue
-                if e.is_dir():
-                    dossiers.append(e)
-                elif Path(e.name).suffix.lower() in EXT_VIDEO:
-                    fichiers.append(e)
-        except OSError as err:
-            self.notifier(f"Dossier illisible : {err.strerror}")
-            return
-        elements = [(d.name, "Dossier", lambda p=d.path: self.ouvrir_dossier(Path(p)), "dossier")
-                    for d in sorted(dossiers, key=lambda e: tri_naturel(e.name))]
-        for f in sorted(fichiers, key=lambda e: tri_naturel(e.name)):
-            try:
-                taille = taille_lisible(f.stat().st_size)
-            except OSError:
-                taille = ""
-            elements.append((Path(f.name).stem, taille, lambda p=f.path: self.lire_video(p), "video"))
-        self.ouvrir(Liste(self, titre or Path(dossier).name, elements, "Aucune vidéo dans ce dossier.", "video"), ROUGE)
-
-    def lire_video(self, chemin):
-        self.lancer_mpv(["--save-position-on-quit", chemin])
-
-    # Chaînes TV
-    def ouvrir_tv(self):
-        ecran = Liste(self, "Chaînes TV", [], "Chargement des chaînes…", "tv")
-        self.ouvrir(ecran, BLEU)
-
-        def charger():
-            source = str(self.cfg.get("chaines", ""))
-            cache = CONFIG_DIR / "chaines-cache.m3u"
-            texte = ""
-            try:
-                if source.startswith(("http://", "https://")):
-                    import urllib.request  # chargé seulement ici : 6 Mo évités tant qu'on ne regarde pas la TV
-                    try:
-                        with urllib.request.urlopen(source, timeout=15) as r:
-                            texte = r.read().decode("utf-8", "replace")
-                        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-                        cache.write_text(texte)
-                    except OSError:
-                        texte = cache.read_text() if cache.exists() else ""
-                elif source:
-                    texte = Path(source).expanduser().read_text(errors="replace")
-            except OSError:
-                texte = ""
-            chaines = lire_m3u(texte)
-            ecran.elements = [(nom, groupe, lambda i=i: self.regarder(chaines, i))
-                              for i, (nom, groupe, _) in enumerate(chaines)]
-            ecran.vide = ("Aucune chaîne. Vérifie la connexion, ou mets une liste M3U "
-                          "dans « chaines » de ~/.config/salon/config.json.")
-            pygame.event.post(pygame.event.Event(EV_REVEIL))
-
-        threading.Thread(target=charger, daemon=True).start()
-
-    def regarder(self, chaines, index):
-        lignes = ["#EXTM3U"]
-        for nom, _, url in chaines:
-            lignes += [f"#EXTINF:-1,{nom}", url]
-        try:
-            PLAYLIST_TV.write_text("\n".join(lignes) + "\n")
-        except OSError as e:
-            self.notifier(f"Impossible de préparer la liste : {e.strerror}")
-            return
-        self.lancer_mpv([f"--playlist={PLAYLIST_TV}", f"--playlist-start={index}",
-                         "--osd-playing-msg=${media-title}", "--osd-duration=2500"], tv=True)
-
     # Jeux
     def dossiers_cores(self):
         candidats = [self.cfg.get("cores_dir") or "",
@@ -1288,8 +1167,12 @@ class App:
         else:
             # Profil à part : la connexion à Netflix est gardée d'une fois sur l'autre.
             cmd = [nav, "--kiosk", "--no-first-run", "--no-default-browser-check", "--disable-translate",
-                   "--disable-features=Translate,MediaRouter", "--password-store=basic",
-                   f"--user-data-dir={CONFIG_DIR / 'navigateur'}", url]
+                   "--disable-features=Translate,MediaRouter,OptimizationHints", "--password-store=basic",
+                   "--disable-extensions", "--disable-sync", "--renderer-process-limit=2",
+                   f"--user-data-dir={CONFIG_DIR / 'navigateur'}"]
+            if self.pc.memoire()[1] < 3 * 2**30:  # moins de 3 Go : mode « petit appareil » de Chrome
+                cmd.append("--enable-low-end-device-mode")
+            cmd.append(url)
         self.lancer(cmd, "web")
         if not shutil.which("xdotool"):
             self.notifier("Installe xdotool pour piloter Netflix au téléphone : sudo apt install xdotool")
@@ -1396,25 +1279,22 @@ class App:
             self.genre_enfant = genre
         except OSError as e:
             self.notifier(f"Impossible de lancer {cmd[0]} : {e.strerror}")
-
-    def lancer_mpv(self, args, tv=False):
-        mpv = list(self.cfg.get("mpv") or DEFAUTS["mpv"])
-        if not shutil.which(mpv[0]):
-            self.notifier("mpv n'est pas installé : sudo apt install mpv")
             return
-        try:
-            MPV_SOCKET.unlink()
-        except OSError:
-            pass
-        self.lancer(mpv + [f"--input-ipc-server={MPV_SOCKET}"] + args, "tv" if tv else "mpv")
+        self.liberer_memoire()
 
-    def mpv(self, *commande):
+    def liberer_memoire(self):
+        """Pendant un jeu ou Netflix, Salon est caché : il rend au système images, fonds et polices
+        gardés en cache (recalculés en quelques millisecondes au retour)."""
+        self.pinceau.caches.clear()
+        self._textes.clear()
+        self._fonds.clear()
+        self._fond = (None, None)
+        self._polices.clear()
+        gc.collect()
         try:
-            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
-                s.settimeout(0.5)
-                s.connect(str(MPV_SOCKET))
-                s.sendall((json.dumps({"command": list(commande)}) + "\n").encode())
-        except OSError:
+            import ctypes
+            ctypes.CDLL("libc.so.6").malloc_trim(0)  # rend vraiment la mémoire libérée au système
+        except (OSError, AttributeError):
             pass
 
     def fin_enfant(self):
@@ -1435,23 +1315,7 @@ class App:
     def commande(self, a, source="local"):
         if self.enfant:
             g = self.genre_enfant
-            if g in ("mpv", "tv"):
-                table = {
-                    "ok": ("cycle", "pause"), "pause": ("cycle", "pause"),
-                    "vol+": ("add", "volume", 5), "vol-": ("add", "volume", -5),
-                    "retour": ("quit",), "accueil": ("quit",), "stop": ("quit",),
-                }
-                if g == "tv":
-                    table.update({"haut": ("playlist-prev",), "bas": ("playlist-next",),
-                                  "gauche": ("add", "volume", -5), "droite": ("add", "volume", 5),
-                                  "recul": ("playlist-prev",), "avance": ("playlist-next",)})
-                else:
-                    table.update({"gauche": ("seek", -10), "droite": ("seek", 30),
-                                  "recul": ("seek", -60), "avance": ("seek", 60),
-                                  "haut": ("add", "volume", 5), "bas": ("add", "volume", -5)})
-                if a in table:
-                    self.mpv(*table[a])
-            elif g == "web":
+            if g == "web":
                 # Raccourcis du lecteur Netflix : espace = pause, flèches = avancer/reculer/volume.
                 touches = {"ok": "space", "pause": "space", "gauche": "Left", "droite": "Right",
                            "haut": "Up", "bas": "Down", "recul": "Left", "avance": "Right",
@@ -1493,6 +1357,9 @@ class App:
             self.commande(e.action, "telephone")
         elif t == EV_REVEIL:
             self.sale = True
+        elif t == EV_JEU:
+            self.pile[0].compter()
+            self.notifier(f"Jeu reçu : {e.nom} ({e.console})")
         elif t == pygame.KEYDOWN:
             touches = {
                 pygame.K_UP: "haut", pygame.K_DOWN: "bas", pygame.K_LEFT: "gauche", pygame.K_RIGHT: "droite",
@@ -1644,22 +1511,90 @@ class App:
                 client, _ = self.serveur.accept()
             except OSError:
                 return  # serveur fermé
-            with client:
-                try:
-                    client.settimeout(2)
-                    requete = b""
-                    while b"\r\n\r\n" not in requete and len(requete) < 8192:
-                        morceau = client.recv(2048)
-                        if not morceau:
-                            break
-                        requete += morceau
-                    methode, chemin = requete.split(b"\r\n", 1)[0].decode("latin-1").split()[:2]
+            # Un fil par connexion : un envoi de jeu ne bloque pas les boutons de la télécommande.
+            threading.Thread(target=self.client, args=(client,), daemon=True).start()
+
+    def client(self, client):
+        with client:
+            try:
+                client.settimeout(10)
+                requete = b""
+                while b"\r\n\r\n" not in requete:
+                    morceau = client.recv(4096)
+                    if not morceau or len(requete) > 16384:
+                        return
+                    requete += morceau
+                tete, debut = requete.split(b"\r\n\r\n", 1)
+                lignes = tete.decode("latin-1").split("\r\n")
+                methode, chemin = lignes[0].split()[:2]
+                entetes = {}
+                for ligne in lignes[1:]:
+                    cle, _, valeur = ligne.partition(":")
+                    entetes[cle.strip().lower()] = valeur.strip()
+                url = urlparse(chemin)
+                if methode == "POST" and url.path == "/envoyer":
+                    statut, genre, corps = self.recevoir_jeu(client, url, entetes, debut)
+                else:
                     statut, genre, corps = self.repondre(methode, chemin)
-                    client.sendall(
-                        (f"HTTP/1.1 {statut}\r\nContent-Type: {genre}\r\nContent-Length: {len(corps)}\r\n"
-                         "Cache-Control: no-store\r\nConnection: close\r\n\r\n").encode() + corps)
-                except (OSError, ValueError):
-                    pass
+                client.sendall(
+                    (f"HTTP/1.1 {statut}\r\nContent-Type: {genre}\r\nContent-Length: {len(corps)}\r\n"
+                     "Cache-Control: no-store\r\nConnection: close\r\n\r\n").encode() + corps)
+            except (OSError, ValueError):
+                pass
+
+    def recevoir_jeu(self, client, url, entetes, debut):
+        """Écrit le fichier envoyé par le téléphone dans ~/ROMs/<console>, morceau par morceau."""
+        def reponse(statut, **donnees):
+            return statut, "application/json", json.dumps(donnees).encode()
+
+        q = parse_qs(url.query)
+        nom = os.path.basename(q.get("nom", [""])[0]).strip()
+        console = q.get("console", ["auto"])[0]
+        if not nom or nom.startswith("."):
+            return reponse("400 Bad Request", erreur="Nom de fichier invalide.")
+        if console not in EXT_ENVOI:
+            console = deviner_console(nom)
+            if not console:
+                return reponse("400 Bad Request", erreur=f"Choisis la console : impossible de la deviner pour « {nom} ».")
+        if Path(nom).suffix.lower() not in EXT_ENVOI[console]:
+            acceptes = ", ".join(sorted(EXT_ENVOI[console]))
+            return reponse("400 Bad Request", erreur=f"Pas un jeu {NOMS[console]} (fichiers acceptés : {acceptes}).")
+        try:
+            taille = int(entetes.get("content-length", ""))
+        except ValueError:
+            return reponse("411 Length Required", erreur="Taille du fichier inconnue.")
+        dossier = Path(self.cfg.get("roms", "~/ROMs")).expanduser() / console
+        try:
+            dossier.mkdir(parents=True, exist_ok=True)
+            if taille > shutil.disk_usage(dossier).free - 100 * 2**20:
+                return reponse("507 Insufficient Storage", erreur="Plus assez de place sur le PC.")
+        except OSError as e:
+            return reponse("500 Internal Server Error", erreur=f"Dossier inaccessible : {e.strerror}")
+        if entetes.get("expect", "").lower() == "100-continue":
+            client.sendall(b"HTTP/1.1 100 Continue\r\n\r\n")
+        partiel = dossier / (nom + ".part")  # extension inconnue : invisible dans Salon pendant l'envoi
+        recu = 0
+        try:
+            client.settimeout(30)
+            with open(partiel, "wb") as f:
+                morceau = debut[:taille]
+                while True:
+                    f.write(morceau)
+                    recu += len(morceau)
+                    if recu >= taille:
+                        break
+                    morceau = client.recv(min(256 * 1024, taille - recu))
+                    if not morceau:
+                        raise OSError("connexion coupée")
+            os.replace(partiel, dossier / nom)
+        except OSError:
+            try:
+                partiel.unlink()
+            except OSError:
+                pass
+            return reponse("500 Internal Server Error", erreur="Envoi interrompu.")
+        pygame.event.post(pygame.event.Event(EV_JEU, nom=nom_de_jeu(nom), console=NOMS[console]))
+        return reponse("200 OK", ok=True, console=NOMS[console])
 
     def repondre(self, methode, chemin):
         url = urlparse(chemin)
@@ -1690,7 +1625,7 @@ class App:
     def boucle(self):
         # Pas de pygame.event.wait : dès qu'une manette est branchée, SDL y vérifie les événements
         # toutes les millisecondes (11 fois plus de processeur, mesuré). On dort entre deux tours :
-        # 16 ms juste après une action (fluide), 50 ms au repos, 100 ms pendant un film ou un jeu.
+        # 16 ms juste après une action (fluide), 50 ms au repos, 100 ms pendant un jeu ou Netflix.
         derniere_action = 0.0
         while self.actif:
             evenements = pygame.event.get()
@@ -1729,24 +1664,32 @@ class App:
 PAGE_TELECOMMANDE = """<!doctype html>
 <html lang="fr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<meta name="theme-color" content="#0e1016">
+<meta name="theme-color" content="#0b0e17">
 <title>Salon</title>
 <style>
-:root{color-scheme:dark}
+:root{color-scheme:dark;--fond:#0b0e17;--carte:#161b2b;--appui:#262e45;--texte:#f2f4f9;--dim:#848ea6;
+ --vert:#34cd7d;--rouge:#ff5462;--bleu:#409cff}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;background:#0e1016;color:#eceff4;font:16px system-ui,sans-serif;
- min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:16px;
+body{margin:0;background:var(--fond);color:var(--texte);font:16px system-ui,sans-serif;min-height:100vh;
+ display:flex;flex-direction:column;align-items:center;gap:20px;padding:20px 16px 32px;
  user-select:none;-webkit-user-select:none;touch-action:manipulation}
-#etat{color:#8a92a3;min-height:1.2em;text-align:center}
+#etat{color:var(--dim);min-height:1.2em;text-align:center;font-size:15px}
 .croix{display:grid;grid-template-columns:repeat(3,84px);grid-template-rows:repeat(3,84px);gap:10px}
 .ligne{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:300px}
-button{border:0;border-radius:18px;background:#1c202a;color:#eceff4;font:600 18px system-ui,sans-serif;
- min-width:84px;height:64px;padding:0 12px}
-.croix button{height:84px;font-size:28px}
-button:active{background:#2e3546}
-.ok{background:#4299e1;border-radius:50%}
-.ok:active{background:#2b6cb0}
-.stop{color:#e5484d}
+button,.bouton{border:0;border-radius:18px;background:var(--carte);color:var(--texte);font:600 17px system-ui,sans-serif;
+ min-width:84px;height:60px;padding:0 14px;display:inline-flex;align-items:center;justify-content:center}
+.croix button{height:84px;font-size:26px}
+button:active,.bouton:active{background:var(--appui)}
+.ok{background:var(--vert);color:#06210f;border-radius:50%}
+.stop{color:var(--rouge)}
+.envoi{width:100%;max-width:340px;background:var(--carte);border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:12px}
+h2{margin:0;font-size:17px}
+select{width:100%;height:48px;border-radius:14px;border:0;background:var(--fond);color:var(--texte);font:16px system-ui;padding:0 12px}
+.bouton{width:100%;background:var(--bleu);color:#fff}
+#envois{display:flex;flex-direction:column;gap:14px}
+.envoi-ligne{display:flex;flex-direction:column;gap:6px;font-size:14px;word-break:break-all}
+progress{width:100%;height:8px;accent-color:var(--bleu)}
+.reussi{color:var(--vert)} .rate{color:var(--rouge)}
 </style></head><body>
 <div id="etat">Salon</div>
 <div class="croix">
@@ -1759,9 +1702,15 @@ button:active{background:#2e3546}
  <button data-a="recul">⏪</button><button data-a="avance">⏩</button><button class="stop" data-a="stop">■ Stop</button>
  <button data-a="vol-">Vol −</button><button data-a="vol+">Vol +</button>
 </div>
+<section class="envoi">
+ <h2>Ajouter des jeux</h2>
+ <select id="console"><option value="auto">Console : automatique</option>{{CONSOLES}}</select>
+ <label class="bouton">Choisir des jeux<input id="fichiers" type="file" multiple hidden></label>
+ <div id="envois"></div>
+</section>
 <script>
 const envoyer = a => { fetch('/action?a=' + a, {method: 'POST'}).catch(() => {}); if (navigator.vibrate) navigator.vibrate(12); };
-document.querySelectorAll('button').forEach(b => {
+document.querySelectorAll('button[data-a]').forEach(b => {
   let t1, t2;
   const fin = () => { clearTimeout(t1); clearInterval(t2); };
   b.addEventListener('pointerdown', e => {
@@ -1771,13 +1720,38 @@ document.querySelectorAll('button').forEach(b => {
   ['pointerup', 'pointerleave', 'pointercancel'].forEach(n => b.addEventListener(n, fin));
 });
 const etat = document.getElementById('etat');
-const noms = {mpv: 'Vidéo en cours', tv: 'TV en cours (▲▼ change de chaîne)', retroarch: 'Jeu en cours',
-  web: 'Netflix (OK = pause, ◀ ▶ = reculer/avancer, Stop = fermer)'};
+const noms = {retroarch: 'Jeu en cours (Stop = quitter)', web: 'Netflix (OK = pause, ◀ ▶ = reculer/avancer, Stop = fermer)'};
 setInterval(() => fetch('/etat').then(r => r.json()).then(e => {
   etat.textContent = e.lecture ? noms[e.lecture] : e.ecran;
 }).catch(() => { etat.textContent = 'PC injoignable'; }), 2000);
+
+const choix = document.getElementById('console'), envois = document.getElementById('envois');
+document.getElementById('fichiers').addEventListener('change', async e => {
+  for (const f of [...e.target.files]) await envoyerJeu(f);
+  e.target.value = '';
+});
+function envoyerJeu(f) {
+  return new Promise(fini => {
+    const ligne = document.createElement('div'), nom = document.createElement('span'), barre = document.createElement('progress');
+    ligne.className = 'envoi-ligne'; nom.textContent = f.name; barre.max = 100; barre.value = 0;
+    ligne.append(nom, barre); envois.prepend(ligne);
+    const fin = (reussi, texte) => {
+      barre.remove(); const m = document.createElement('small');
+      m.className = reussi ? 'reussi' : 'rate'; m.textContent = (reussi ? '✓ ' : '✗ ') + texte; ligne.append(m); fini();
+    };
+    const x = new XMLHttpRequest();
+    x.open('POST', '/envoyer?console=' + encodeURIComponent(choix.value) + '&nom=' + encodeURIComponent(f.name));
+    x.upload.onprogress = ev => { if (ev.lengthComputable) barre.value = 100 * ev.loaded / ev.total; };
+    x.onload = () => {
+      let r = {}; try { r = JSON.parse(x.responseText); } catch (_) {}
+      if (x.status === 200) fin(true, 'Ajouté à ' + r.console); else fin(false, r.erreur || 'Erreur ' + x.status);
+    };
+    x.onerror = () => fin(false, 'PC injoignable');
+    x.send(f);
+  });
+}
 </script></body></html>
-"""
+""".replace("{{CONSOLES}}", "".join(f'<option value="{d}">{n}</option>' for d, n, _, _ in SYSTEMES))
 
 
 def main():

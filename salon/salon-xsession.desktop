@@ -1,5 +1,5 @@
 [Desktop Entry]
 Type=Application
 Name=Salon
-Comment=Films, chaînes TV et jeux, sans le bureau
+Comment=Jeux rétro et Netflix, sans le bureau
 Exec=/usr/local/bin/salon-session

@@ -26,9 +26,7 @@ utilisateur="$(id -un)"
 
 echo "== 1/4 Paquets"
 sudo apt-get update -qq
-sudo apt-get install -y python3-pygame mpv x11-xserver-utils fonts-inter xdotool
-# Décodage vidéo par la puce graphique (Intel) : indispensable pour la 1080p sur un Celeron.
-sudo apt-get install -y -qq i965-va-driver intel-media-va-driver >/dev/null 2>&1 || true
+sudo apt-get install -y python3-pygame x11-xserver-utils fonts-inter xdotool
 if ! sudo apt-get install -y retroarch; then
   echo "   RetroArch absent d'apt : installe-le avec « flatpak install flathub org.libretro.RetroArch »."
 fi
@@ -98,4 +96,4 @@ echo "   Lancer : « salon » dans le menu des applications (ou la commande salo
 [ "$session" = 1 ] && echo "   Sans bureau : déconnecte-toi, clique sur ton nom, puis sur ⚙ en bas à droite → « Salon »."
 [ "$auto" = 1 ] && echo "   Au prochain démarrage, le PC ouvre Salon directement."
 echo "   Téléphone (même Wi-Fi) : http://${ip:-ADRESSE-DU-PC}:8765"
-echo "   Jeux : range-les dans ~/ROMs/<console>. Films : ~/Vidéos."
+echo "   Jeux : envoie-les depuis la page du téléphone, ou range-les dans ~/ROMs/<console>."

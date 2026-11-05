@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Salon
-Comment=Films, chaînes TV, jeux rétro et infos du PC
+Comment=Jeux rétro, Netflix et infos du PC
 Exec=salon
 Icon=applications-multimedia
 Categories=AudioVideo;Game;

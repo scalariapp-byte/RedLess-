@@ -31,7 +31,7 @@ fi
 memoire_mo=$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo)
 echo "Mémoire du PC : $memoire_mo Mo"
 
-echo "== 1/4 Mémoire compressée (zram)"
+echo "== 1/3 Mémoire compressée (zram)"
 # Les pages peu utilisées sont compressées en mémoire (2 à 3 fois plus petites) au lieu d'aller sur le
 # disque, très lent sur un eMMC. C'est le plus gros gain sur un PC à 2 ou 4 Go.
 if sudo apt-get install -y -qq systemd-zram-generator >/dev/null 2>&1; then
@@ -51,13 +51,7 @@ printf 'vm.swappiness = 150\nvm.page-cluster = 0\nvm.watermark_scale_factor = 12
   | sudo tee /etc/sysctl.d/99-salon.conf >/dev/null
 sudo sysctl --system >/dev/null 2>&1 || true
 
-echo "== 2/4 Décodage vidéo par la puce graphique"
-# Sans ces pilotes, le processeur décode la vidéo seul : un film 1080p saccade sur un Celeron.
-for paquet in i965-va-driver intel-media-va-driver mesa-va-drivers vainfo; do
-  sudo apt-get install -y -qq "$paquet" >/dev/null 2>&1 && echo "   $paquet : ok" || echo "   $paquet : indisponible"
-done
-
-echo "== 3/4 Services inutiles"
+echo "== 2/3 Services inutiles"
 sudo mkdir -p "$etat"
 for s in $services; do
   if systemctl is-enabled "$s" >/dev/null 2>&1; then
@@ -69,14 +63,7 @@ for s in $services_utilisateur; do
   systemctl --user mask --now "$s" >/dev/null 2>&1 && echo "   $s : arrêté (recherche de fichiers de GNOME)"
 done
 
-echo "== 4/4 Bilan"
+echo "== 3/3 Bilan"
 swapon --show 2>/dev/null || true
 free -h
-if command -v vainfo >/dev/null; then
-  if vainfo 2>/dev/null | grep -q VAProfileH264; then
-    echo "   Décodage matériel H.264 : disponible"
-  else
-    echo "   Décodage matériel : non détecté (vérifie avec « vainfo » une fois connecté à l'écran)"
-  fi
-fi
 echo "Redémarre le PC pour que tout soit pris en compte. Pour revenir en arrière : bash salon/optimiser.sh --annuler"
