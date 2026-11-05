@@ -7,3 +7,4 @@ android/build/
 dist/*.aab
 node_modules/
 public/
+__pycache__/
