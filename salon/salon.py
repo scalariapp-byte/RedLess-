@@ -12,6 +12,7 @@ import math
 import os
 import re
 import shutil
+import signal
 import socket
 import subprocess
 import sys
@@ -64,6 +65,9 @@ DEFAUTS = {
             "--demuxer-max-bytes=32MiB", "--demuxer-max-back-bytes=8MiB"],
     "port_telecommande": 8765,
     "ecran_retourne": False,
+    "netflix": "https://www.netflix.com/browse",
+    # Navigateurs capables de lire les vidéos protégées (DRM), essayés dans l'ordre.
+    "navigateur": "",
 }
 ANCIEN_MPV = ["mpv", "--fs", "--hwdec=auto-safe", "--really-quiet"]
 
@@ -115,6 +119,7 @@ ORANGE = (255, 154, 60)
 ROUGE = (255, 84, 98)
 BLEU = (64, 156, 255)
 VIOLET = (158, 118, 255)
+ROSE = (240, 80, 150)
 
 EV_TELE = pygame.USEREVENT + 1     # action venue du téléphone
 EV_REVEIL = pygame.USEREVENT + 2   # une tâche de fond a fini : redessiner
@@ -692,12 +697,13 @@ class Accueil(Ecran):
         self.sel = 0
         self.tuiles = [
             ("Films", ROUGE, "films", app.ouvrir_films),
+            ("Netflix", ROSE, "video", app.ouvrir_netflix),
             ("Chaînes TV", BLEU, "tv", app.ouvrir_tv),
             ("Jeux", VERT, "jeux", app.ouvrir_jeux),
             ("Système", ORANGE, "systeme", app.ouvrir_systeme),
             ("Options", VIOLET, "options", app.ouvrir_options),
         ]
-        self.details = ["", "Chaînes gratuites", "", "", "Écran, veille, arrêt"]
+        self.details = ["", "Dans Chrome", "Chaînes gratuites", "", "", "Écran, veille, arrêt"]
         self.puces = []
         self._compteur = 0
 
@@ -741,7 +747,7 @@ class Accueil(Ecran):
         racine = Path(app.cfg.get("roms", "~/ROMs")).expanduser()
         jeux = sum(len(App.lister_jeux(racine / d, ext)) for d, _, _, ext in SYSTEMES)
         self.details[0] = f"{films} élément{'s' if films > 1 else ''}" if films else "Dossier vide"
-        self.details[2] = f"{jeux} jeu{'x' if jeux > 1 else ''}" if jeux else "Aucun jeu"
+        self.details[3] = f"{jeux} jeu{'x' if jeux > 1 else ''}" if jeux else "Aucun jeu"
 
     def tick(self):
         self._compteur += 1
@@ -762,7 +768,7 @@ class Accueil(Ecran):
         if b:
             puces.append(("batterie", f"{b[0]} %"))
         self.puces = puces
-        self.details[3] = f"Processeur {cpu:.0f} %" + (f" · {t:.0f} °C" if t else "")
+        self.details[4] = f"Processeur {cpu:.0f} %" + (f" · {t:.0f} °C" if t else "")
         return True
 
     def dessiner(self, s):
@@ -1262,6 +1268,39 @@ class App:
                     return d / f"{nom}.so"
         return None
 
+    # Netflix
+    def navigateur(self):
+        choix = self.cfg.get("navigateur")
+        candidats = [choix] if choix else ["google-chrome-stable", "google-chrome", "firefox"]
+        for nom in candidats:
+            if nom and shutil.which(nom):
+                return nom
+        return None
+
+    def ouvrir_netflix(self):
+        nav = self.navigateur()
+        if not nav:
+            self.notifier("Netflix a besoin de Google Chrome : bash salon/installer.sh --netflix")
+            return
+        url = self.cfg.get("netflix") or DEFAUTS["netflix"]
+        if "firefox" in nav:
+            cmd = [nav, "--kiosk", url]
+        else:
+            # Profil à part : la connexion à Netflix est gardée d'une fois sur l'autre.
+            cmd = [nav, "--kiosk", "--no-first-run", "--no-default-browser-check", "--disable-translate",
+                   "--disable-features=Translate,MediaRouter", "--password-store=basic",
+                   f"--user-data-dir={CONFIG_DIR / 'navigateur'}", url]
+        self.lancer(cmd, "web")
+        if not shutil.which("xdotool"):
+            self.notifier("Installe xdotool pour piloter Netflix au téléphone : sudo apt install xdotool")
+
+    @staticmethod
+    def touche(touche):
+        """Envoie une touche à la fenêtre au premier plan (le navigateur)."""
+        if shutil.which("xdotool"):
+            subprocess.Popen(["xdotool", "key", "--clearmodifiers", touche],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
     def commande_retroarch(self):
         c = self.cfg.get("retroarch") or "retroarch"
         if isinstance(c, list):
@@ -1386,7 +1425,10 @@ class App:
 
     def arreter_enfant(self):
         if self.enfant and self.enfant.poll() is None:
-            self.enfant.terminate()
+            try:  # tout le groupe : Chrome lance de nombreux processus
+                os.killpg(self.enfant.pid, signal.SIGTERM)
+            except OSError:
+                self.enfant.terminate()
 
     # ------------------------------------------------ commandes
 
@@ -1409,6 +1451,17 @@ class App:
                                   "haut": ("add", "volume", 5), "bas": ("add", "volume", -5)})
                 if a in table:
                     self.mpv(*table[a])
+            elif g == "web":
+                # Raccourcis du lecteur Netflix : espace = pause, flèches = avancer/reculer/volume.
+                touches = {"ok": "space", "pause": "space", "gauche": "Left", "droite": "Right",
+                           "haut": "Up", "bas": "Down", "recul": "Left", "avance": "Right",
+                           "retour": "alt+Left"}
+                if a in touches:
+                    self.touche(touches[a])
+                elif a in ("stop", "accueil"):
+                    self.arreter_enfant()
+                elif a in ("vol+", "vol-"):
+                    volume_systeme(5 if a == "vol+" else -5)
             elif source == "telephone":
                 if a in ("stop", "accueil"):
                     self.arreter_enfant()
@@ -1718,7 +1771,8 @@ document.querySelectorAll('button').forEach(b => {
   ['pointerup', 'pointerleave', 'pointercancel'].forEach(n => b.addEventListener(n, fin));
 });
 const etat = document.getElementById('etat');
-const noms = {mpv: 'Vidéo en cours', tv: 'TV en cours (▲▼ change de chaîne)', retroarch: 'Jeu en cours'};
+const noms = {mpv: 'Vidéo en cours', tv: 'TV en cours (▲▼ change de chaîne)', retroarch: 'Jeu en cours',
+  web: 'Netflix (OK = pause, ◀ ▶ = reculer/avancer, Stop = fermer)'};
 setInterval(() => fetch('/etat').then(r => r.json()).then(e => {
   etat.textContent = e.lecture ? noms[e.lecture] : e.ecran;
 }).catch(() => { etat.textContent = 'PC injoignable'; }), 2000);

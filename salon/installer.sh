@@ -3,15 +3,18 @@
 #   bash salon/installer.sh                    : appli « Salon » dans le menu
 #   bash salon/installer.sh --session          : + session « Salon » à l'écran de connexion (sans bureau)
 #   bash salon/installer.sh --demarrage-auto   : + le PC démarre directement sur Salon
+#   bash salon/installer.sh --netflix          : + Google Chrome, pour la tuile Netflix
 set -euo pipefail
 
 ici="$(cd "$(dirname "$0")" && pwd)"
 session=0
 auto=0
+netflix=0
 for option in "$@"; do
   case "$option" in
     --session) session=1 ;;
     --demarrage-auto) session=1; auto=1 ;;
+    --netflix) netflix=1 ;;
     *) echo "Option inconnue : $option"; exit 1 ;;
   esac
 done
@@ -23,7 +26,7 @@ utilisateur="$(id -un)"
 
 echo "== 1/4 Paquets"
 sudo apt-get update -qq
-sudo apt-get install -y python3-pygame mpv x11-xserver-utils fonts-inter
+sudo apt-get install -y python3-pygame mpv x11-xserver-utils fonts-inter xdotool
 # Décodage vidéo par la puce graphique (Intel) : indispensable pour la 1080p sur un Celeron.
 sudo apt-get install -y -qq i965-va-driver intel-media-va-driver >/dev/null 2>&1 || true
 if ! sudo apt-get install -y retroarch; then
@@ -38,6 +41,14 @@ for core in nestopia snes9x genesisplusgx gambatte mgba beetle-psx beetle-pce-fa
     echo "   émulateur $core : pas dans apt, à prendre dans RetroArch"
   fi
 done
+
+if [ "$netflix" = 1 ] && ! command -v google-chrome-stable >/dev/null; then
+  # Netflix exige un navigateur qui lit les vidéos protégées : Chromium d'Ubuntu ne le fait pas.
+  echo "   Google Chrome (pour Netflix)"
+  deb="$(mktemp -d)/chrome.deb"
+  wget -q -O "$deb" https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+  sudo apt-get install -y "$deb"
+fi
 
 echo "== 2/4 Programme"
 sudo install -Dm644 "$ici/salon.py" /opt/salon/salon.py

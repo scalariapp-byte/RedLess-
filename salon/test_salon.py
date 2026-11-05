@@ -97,6 +97,11 @@ app.commande("accueil")
 verifier(len(app.pile) == 1, "Accueil vide la pile")
 
 app.commande("droite")
+verifier(app.pile[0].tuiles[1][0] == "Netflix", "tuile Netflix")
+app.cfg["navigateur"] = "navigateur-absent"
+app.commande("ok")  # Netflix sans navigateur : un message, pas de plantage
+verifier(app.enfant is None and app.toast and "Chrome" in app.toast[0], "Netflix sans navigateur")
+app.commande("droite")
 app.commande("ok")  # Chaînes
 for _ in range(50):
     for e in pygame.event.get():
@@ -158,13 +163,31 @@ verifier("numpy" not in sys.modules or sys.modules["numpy"] is None, "numpy n'es
 
 # Tactile : appui sur la tuile « Jeux »
 app.commande("accueil")
-r = app.pile[0]._rects()[2]
+r = app.pile[0]._rects()[3]
 app.traiter(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=r.center))
 app.traiter(pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=r.center))
 verifier(titre() == "Jeux", "tactile : tuile Jeux")
 app.traiter(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(20, 20)))
 app.traiter(pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=(20, 20)))
 verifier(len(app.pile) == 1, "tactile : bouton retour")
+
+# Netflix : un faux navigateur reçoit les commandes, « Stop » ferme tout le groupe de processus
+faux = maison / "faux-navigateur"
+faux.write_text("#!/bin/sh\nsleep 30 &\nwait\n")
+faux.chmod(0o755)
+app.cfg["navigateur"] = str(faux)
+app.ouvrir_netflix()
+verifier(app.genre_enfant == "web", "Netflix lancé")
+groupe = app.enfant.pid
+app.commande("stop", "telephone")
+time.sleep(0.3)
+verifier(app.enfant.poll() is not None, "Stop ferme le navigateur")
+try:
+    os.killpg(groupe, 0)
+    verifier(False, "les processus enfants du navigateur sont fermés aussi")
+except ProcessLookupError:
+    pass
+app.fin_enfant()
 
 # Télécommande
 base = f"http://127.0.0.1:{port}"
@@ -175,7 +198,7 @@ avant = app.pile[0].sel
 time.sleep(0.1)
 for e in pygame.event.get():
     app.traiter(e)
-verifier(app.pile[0].sel == (avant + 1) % 5, "action reçue du téléphone")
+verifier(app.pile[0].sel == (avant + 1) % 6, "action reçue du téléphone")
 try:
     urllib.request.urlopen(urllib.request.Request(base + "/action?a=rm", method="POST"), timeout=3)
     verifier(False, "action inconnue refusée")

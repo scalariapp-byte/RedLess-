@@ -48,6 +48,7 @@ bash ~/RedLess-/salon/installer.sh --session
 | *(aucune)* | ajoute l'appli « Salon » au menu d'Ubuntu |
 | `--session` | ajoute aussi la session « Salon » (sans bureau) à l'écran de connexion |
 | `--demarrage-auto` | le PC s'allume directement sur Salon, sans mot de passe |
+| `--netflix` | installe Google Chrome pour la tuile Netflix |
 
 Pour annuler le démarrage automatique : `sudo cp /etc/gdm3/custom.conf.avant-salon /etc/gdm3/custom.conf`.
 
@@ -64,6 +65,7 @@ Pour annuler le démarrage automatique : `sudo cp /etc/gdm3/custom.conf.avant-sa
 
 Pendant un **film** : OK pour pause, ◀ ▶ pour reculer de 10 s ou avancer de 30 s, ▲ ▼ pour le volume, Retour pour quitter. mpv reprend là où tu t'étais arrêté.
 Pendant la **TV** : ▲ ▼ pour changer de chaîne, ◀ ▶ pour le volume.
+Pendant **Netflix** : le site officiel s'ouvre dans Chrome en plein écran. Choisis un programme au doigt (écran tactile) ou à la souris ; ensuite OK met en pause, ◀ ▶ reculent ou avancent de 10 s, ▲ ▼ règlent le volume, Retour revient à la page précédente, **Stop** (téléphone) ou **Select + Start** (manette) ferment Netflix. Sur Linux, Netflix limite l'image à 720p.
 Pendant un **jeu** : la manette appartient au jeu. **Select + Start** ensemble quittent le jeu, ou bien « Stop » sur le téléphone.
 
 **Téléphone** : ouvre l'adresse affichée en bas de l'écran (`http://<adresse du PC>:8765`) dans le navigateur, puis « Ajouter à l'écran d'accueil ». Le téléphone doit être sur le même Wi-Fi, ou relié par Tailscale. N'importe qui sur ton réseau peut ouvrir cette page : c'est un choix assumé pour un réseau de maison, pas pour un Wi-Fi public.
