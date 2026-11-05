@@ -204,6 +204,20 @@ def envoyer(nom, contenu, console="auto"):
         return e.code, json.loads(e.read())
 
 
+def zip_avec(nom):
+    import io
+    import zipfile
+    tampon = io.BytesIO()
+    with zipfile.ZipFile(tampon, "w") as z:
+        z.writestr(nom, b"jeu")
+    return tampon.getvalue()
+
+
+def cue_de(*pistes):
+    return "".join(f'FILE "{p}" BINARY\n  TRACK {i + 1:02d} MODE2/2352\n    INDEX 01 00:00:00\n'
+                   for i, p in enumerate(pistes))
+
+
 gros = os.urandom(3 * 2**20 + 123)  # plusieurs morceaux réseau
 code, rep = envoyer("Mario Kart (Europe).sfc", gros)
 verifier(code == 200 and rep["console"] == "Super Nintendo", f"envoi deviné : {code} {rep}")
@@ -214,7 +228,8 @@ evenements()
 verifier(app.toast and "Mario Kart" in app.toast[0] and app.pile[0].details[0] == "5 jeux",
          "le PC affiche le jeu reçu et le compte")
 code, rep = envoyer("Jeu.zip", b"x")
-verifier(code == 400 and "Choisis la console" in rep["erreur"], f".zip sans console : {code} {rep}")
+verifier(code == 400 and "Choisis la console" in rep["erreur"] and not (maison / "ROMs/Jeu.zip").exists(),
+         f".zip illisible sans console : {code} {rep}")
 code, rep = envoyer("Jeu.zip", b"x", "gba")
 verifier(code == 200 and (maison / "ROMs/gba/Jeu.zip").exists(), ".zip avec console choisie")
 code, rep = envoyer("Disque 2.bin", b"x", "psx")
@@ -226,6 +241,42 @@ verifier(code == 400 and not (maison / ".bashrc").exists(), "impossible d'écrir
 code, rep = envoyer("../evasion.sfc", b"x")
 verifier(code == 200 and (maison / "ROMs/snes/evasion.sfc").exists() and not (maison / "ROMs/evasion.sfc").exists(),
          "chemin ramené au nom du fichier")
+
+code, rep = envoyer("Pack GBA.zip", zip_avec("Metroid.gba"))
+verifier(code == 200 and rep["console"] == "Game Boy Advance" and (maison / "ROMs/gba/Pack GBA.zip").exists(),
+         f".zip examiné à l'envoi : {code} {rep}")
+code, rep = envoyer("Piste (Track 2).bin", b"x")  # piste envoyée AVANT son .cue : prise pour de la Mega Drive…
+code, rep = envoyer("Crash.cue", cue_de("Crash (Track 1).bin", "Piste (Track 2).bin").encode())
+verifier(code == 200 and rep["console"] == "PlayStation", f".cue envoyé : {code} {rep}")
+verifier((maison / "ROMs/psx/Piste (Track 2).bin").exists() and not (maison / "ROMs/megadrive/Piste (Track 2).bin").exists(),
+         "… puis rattachée à son .cue quand il arrive")
+code, rep = envoyer("Archive.7z", b"x")
+verifier(code == 400 and "Choisis la console" in rep["erreur"], f".7z sans console : {code} {rep}")
+
+# Jeux posés en vrac dans ~/ROMs : rangés par console
+roms = maison / "ROMs"
+(roms / "Sonic (Europe).md").write_bytes(b"x")
+(roms / "Tekken.cue").write_text(cue_de("Tekken (Track 1).bin"))
+(roms / "Tekken (Track 1).bin").write_bytes(b"x")
+(roms / "Streets.bin").write_bytes(b"x" * 1000)
+(roms / "Pokemon.zip").write_bytes(zip_avec("Pokemon Rouge.gb"))
+(roms / "Gros disque.bin").write_bytes(b"\0")
+os.truncate(roms / "Gros disque.bin", 20 * 2**20)  # fichier creux : 20 Mo sans les écrire
+(roms / "Mystere.7z").write_bytes(b"x")
+app.toast = None
+app.pile[0].compter()
+for chemin, attendu in (("megadrive/Sonic (Europe).md", True), ("psx/Tekken.cue", True),
+                        ("psx/Tekken (Track 1).bin", True), ("megadrive/Streets.bin", True),
+                        ("gb/Pokemon.zip", True), ("psx/Gros disque.bin", True), ("Mystere.7z", True),
+                        ("Sonic (Europe).md", False)):
+    verifier((roms / chemin).exists() == attendu, f"rangement : {chemin} {'absent' if attendu else 'présent'}")
+verifier(app.toast and "rangés" in app.toast[0], f"message de rangement : {app.toast}")
+app.toast = None
+app.pile[0].compter()
+verifier(app.toast and "Mystere.7z" in app.toast[0], f"console inconnue signalée : {app.toast}")
+app.toast = None
+app.pile[0].compter()
+verifier(app.toast is None, "console inconnue signalée une seule fois")
 
 app.fermer_telecommande()
 pygame.quit()

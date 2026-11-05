@@ -29,14 +29,24 @@ Pour annuler le démarrage automatique : `sudo cp /etc/gdm3/custom.conf.avant-sa
 
 1. Sur le téléphone, connecté au même Wi-Fi, ouvre l'adresse affichée en bas à droite de l'écran (`http://<adresse du PC>:8765`).
 2. En bas de la page, dans « Ajouter des jeux », appuie sur **Choisir des jeux** et sélectionne un ou plusieurs fichiers.
-3. La console est devinée d'après l'extension (`.sfc` → Super Nintendo, `.gba` → Game Boy Advance…). Pour les `.zip`, `.7z`, `.bin`, `.cue` et `.chd`, qui servent à plusieurs consoles, choisis la console dans la liste avant d'envoyer.
+3. La console est trouvée toute seule (voir plus bas). Pour un `.7z`, ou un fichier dont la console reste introuvable, choisis-la dans la liste avant d'envoyer.
 4. Une barre montre l'avancement ; le PC affiche « Jeu reçu » et le compte de jeux se met à jour.
-
-Pour un jeu PS1, envoie le `.cue` **et** son ou ses `.bin`, avec « PlayStation » choisi. Le BIOS de la console reste à copier à la main dans `~/.config/retroarch/system/`.
 
 Seules les extensions de jeux sont acceptées, et les fichiers vont uniquement dans `~/ROMs/<console>`. N'importe qui sur ton Wi-Fi peut ouvrir cette page : c'est un choix assumé pour un réseau de maison, pas pour un Wi-Fi public.
 
-Sans téléphone : copie les fichiers dans `~/ROMs/<console>`, où `<console>` vaut `nes`, `snes`, `megadrive`, `mastersystem`, `gb`, `gbc`, `gba`, `pcengine`, `psx` ou `n64`. Seulement des copies de jeux que tu possèdes, ou des homebrews libres.
+## Déposer des jeux en vrac
+
+Pose les fichiers directement dans `~/ROMs` (clé USB, réseau, peu importe) : Salon les range dans le dossier de leur console à l'ouverture de « Jeux », et toutes les 30 secondes sur l'accueil. Il affiche « N jeux rangés par console ».
+
+| Fichier | Console choisie |
+|---|---|
+| `.sfc` `.smc` `.nes` `.gb` `.gbc` `.gba` `.md` `.gen` `.sms` `.pce` `.z64` `.n64` `.pbp`… | d'après l'extension |
+| `.zip` | d'après le jeu qu'il contient |
+| `.cue`, `.chd` | PlayStation ; les `.bin` cités dans le `.cue` le suivent, même s'ils étaient déjà rangés ailleurs |
+| `.bin` | PlayStation s'il fait plus de 16 Mo ou si un `.cue` le cite, sinon Mega Drive |
+| `.7z` et le reste | laissé dans `~/ROMs`, avec un message : range-le à la main dans `~/ROMs/<console>` |
+
+Un jeu identique déjà rangé n'est pas copié deux fois. Le BIOS PS1 reste à copier à la main dans `~/.config/retroarch/system/`. Seulement des copies de jeux que tu possèdes, ou des homebrews libres.
 
 ## Utiliser
 

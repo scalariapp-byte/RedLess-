@@ -80,6 +80,7 @@ SYSTEMES = [
 ]
 
 NOMS = {d: n for d, n, _, _ in SYSTEMES}
+EXT_JEU = {d: set(ext.split()) for d, _, _, ext in SYSTEMES}  # fichiers affichés comme jeux
 # Fichiers acceptés à l'envoi depuis le téléphone (les .bin des jeux PS1 accompagnent leur .cue).
 EXT_ENVOI = {d: set(ext.split()) | ({".bin"} if d == "psx" else set()) for d, _, _, ext in SYSTEMES}
 
@@ -162,6 +163,108 @@ def deviner_console(nom):
     ext = Path(nom).suffix.lower()
     possibles = [d for d, e in EXT_ENVOI.items() if ext in e]
     return possibles[0] if len(possibles) == 1 else None
+
+
+# Extensions partagées par plusieurs consoles : on regarde dans le fichier pour trancher.
+A_INSPECTER = {".zip", ".bin", ".cue", ".chd"}
+
+
+def fichiers_du_cue(cue):
+    """Noms des pistes (.bin) qu'un .cue de PS1 référence."""
+    try:
+        texte = Path(cue).read_text(errors="replace")
+    except OSError:
+        return []
+    return [a or b for a, b in re.findall(r'^\s*FILE\s+(?:"([^"]+)"|(\S+))', texte, re.M | re.I)]
+
+
+def classer(fichier):
+    """Console d'un fichier de jeu, en regardant dedans si l'extension ne suffit pas. None : inconnue."""
+    fichier = Path(fichier)
+    console = deviner_console(fichier.name)
+    if console:
+        return console
+    ext = fichier.suffix.lower()
+    if ext == ".zip":
+        import zipfile  # chargé seulement quand un .zip arrive
+        try:
+            with zipfile.ZipFile(fichier) as z:
+                dedans = z.namelist()
+        except (OSError, zipfile.BadZipFile):
+            return None
+        for nom in dedans:
+            console = deviner_console(nom)
+            if console:
+                return console
+        exts = {Path(n).suffix.lower() for n in dedans}
+        return "psx" if exts & {".cue", ".chd"} else "megadrive" if ".bin" in exts else None
+    if ext in (".cue", ".chd"):
+        return "psx"  # les CD de PC Engine sont rares : la PS1 est le cas courant
+    if ext == ".bin":
+        try:
+            if fichier.stat().st_size > 16 * 2**20:  # une cartouche Mega Drive fait au plus 5 Mo
+                return "psx"
+        except OSError:
+            return None
+        racine = fichier.parent
+        for dossier in (racine, racine / "psx"):
+            for cue in dossier.glob("*.cue"):
+                if fichier.name in fichiers_du_cue(cue):
+                    return "psx"
+        return "megadrive"
+    return None
+
+
+def deplacer(fichier, dossier, ecraser=False):
+    dossier.mkdir(parents=True, exist_ok=True)
+    cible = dossier / fichier.name
+    if cible.exists() and not ecraser:
+        if cible.stat().st_size == fichier.stat().st_size:
+            fichier.unlink()  # même jeu déjà rangé
+            return cible
+        n = 2
+        while cible.exists():
+            cible = dossier / f"{fichier.stem} ({n}){fichier.suffix}"
+            n += 1
+    shutil.move(str(fichier), str(cible))
+    return cible
+
+
+def ranger_roms(racine):
+    """Range les fichiers posés directement dans ~/ROMs dans le dossier de leur console.
+    Renvoie (jeux rangés [(nom, console)], fichiers dont la console reste inconnue)."""
+    racine = Path(racine)
+    try:
+        fichiers = [Path(e.path) for e in os.scandir(racine)
+                    if e.is_file() and not e.name.startswith(".") and not e.name.endswith(".part")]
+    except OSError:
+        return [], []
+    fichiers.sort(key=lambda f: f.suffix.lower() != ".cue")  # les .cue d'abord : leurs pistes suivent
+    ranges, inconnus = [], []
+    for f in fichiers:
+        if not f.exists():
+            continue  # déjà parti avec son .cue
+        console = classer(f)
+        if not console:
+            inconnus.append(f.name)
+            continue
+        try:
+            cible = deplacer(f, racine / console)
+            if f.suffix.lower() == ".cue":
+                rattacher_pistes(cible, racine)
+        except OSError:
+            continue
+        if f.suffix.lower() in EXT_JEU[console]:
+            ranges.append((nom_de_jeu(f.name), NOMS[console]))
+    return ranges, inconnus
+
+
+def rattacher_pistes(cue, racine):
+    """Met les .bin d'un .cue à côté de lui (ils ont pu arriver avant, et être pris pour de la Mega Drive)."""
+    for nom in fichiers_du_cue(cue):
+        for source in (racine / nom, racine / "megadrive" / nom):
+            if source.exists() and source.parent != cue.parent:
+                deplacer(source, cue.parent, ecraser=True)
 
 
 def adresse_ip():
@@ -699,6 +802,7 @@ class Accueil(Ecran):
                 self.tuiles[i][3]()
 
     def compter(self):
+        self.app.ranger()
         racine = Path(self.app.cfg.get("roms", "~/ROMs")).expanduser()
         jeux = sum(len(App.lister_jeux(racine / d, ext)) for d, _, _, ext in SYSTEMES)
         self.details[0] = f"{jeux} jeu{'x' if jeux > 1 else ''}" if jeux else "Aucun jeu"
@@ -893,6 +997,7 @@ class App:
         pygame.event.set_blocked([pygame.ACTIVEEVENT, pygame.TEXTINPUT, pygame.TEXTEDITING])
 
         self.pc = InfosPC()
+        self._signales = set()  # fichiers de console inconnue déjà signalés
         self.pinceau = Pinceau()
         self._polices = {}
         self._textes = {}
@@ -1195,7 +1300,20 @@ class App:
                 return ["flatpak", "run", "org.libretro.RetroArch"]
         return None
 
+    def ranger(self):
+        """Range ce qui a été posé en vrac dans ~/ROMs et le signale à l'écran."""
+        ranges, inconnus = ranger_roms(Path(self.cfg.get("roms", "~/ROMs")).expanduser())
+        nouveaux = [n for n in inconnus if n not in self._signales]
+        if ranges:
+            nom, console = ranges[0]
+            self.notifier(f"{nom} rangé dans {console}" if len(ranges) == 1
+                          else f"{len(ranges)} jeux rangés par console")
+        elif nouveaux:
+            self._signales.update(nouveaux)
+            self.notifier(f"Console inconnue pour « {nouveaux[0]} » : mets-le dans ROMs/<console>")
+
     def ouvrir_jeux(self):
+        self.ranger()
         racine = Path(self.cfg.get("roms", "~/ROMs")).expanduser()
         elements = []
         for dossier, nom, cores, ext in SYSTEMES:
@@ -1552,18 +1670,22 @@ class App:
         console = q.get("console", ["auto"])[0]
         if not nom or nom.startswith("."):
             return reponse("400 Bad Request", erreur="Nom de fichier invalide.")
+        ext = Path(nom).suffix.lower()
+        choisir = f"Choisis la console : impossible de la deviner pour « {nom} »."
         if console not in EXT_ENVOI:
             console = deviner_console(nom)
-            if not console:
-                return reponse("400 Bad Request", erreur=f"Choisis la console : impossible de la deviner pour « {nom} ».")
-        if Path(nom).suffix.lower() not in EXT_ENVOI[console]:
+            if not console and ext not in A_INSPECTER:
+                return reponse("400 Bad Request", erreur=choisir)
+        if console and ext not in EXT_ENVOI[console]:
             acceptes = ", ".join(sorted(EXT_ENVOI[console]))
             return reponse("400 Bad Request", erreur=f"Pas un jeu {NOMS[console]} (fichiers acceptés : {acceptes}).")
         try:
             taille = int(entetes.get("content-length", ""))
         except ValueError:
             return reponse("411 Length Required", erreur="Taille du fichier inconnue.")
-        dossier = Path(self.cfg.get("roms", "~/ROMs")).expanduser() / console
+        racine = Path(self.cfg.get("roms", "~/ROMs")).expanduser()
+        # Console encore inconnue (.zip, .bin…) : reçu dans ROMs, puis examiné et rangé.
+        dossier = racine / console if console else racine
         try:
             dossier.mkdir(parents=True, exist_ok=True)
             if taille > shutil.disk_usage(dossier).free - 100 * 2**20:
@@ -1593,6 +1715,18 @@ class App:
             except OSError:
                 pass
             return reponse("500 Internal Server Error", erreur="Envoi interrompu.")
+        recu = dossier / nom
+        try:
+            if not console:
+                console = classer(recu)
+                if not console:
+                    recu.unlink()
+                    return reponse("400 Bad Request", erreur=choisir)
+                recu = deplacer(recu, racine / console)
+            if ext == ".cue":
+                rattacher_pistes(recu, racine)
+        except OSError as e:
+            return reponse("500 Internal Server Error", erreur=f"Rangement impossible : {e.strerror}")
         pygame.event.post(pygame.event.Event(EV_JEU, nom=nom_de_jeu(nom), console=NOMS[console]))
         return reponse("200 OK", ok=True, console=NOMS[console])
 
