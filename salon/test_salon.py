@@ -42,8 +42,8 @@ with socket.socket() as s:
     "chaines": str(maison / "chaines.m3u"), "port_telecommande": port}))
 
 sys.path.insert(0, str(Path(__file__).parent))
+import salon  # noqa: E402  (avant pygame : Salon bloque les modules inutiles de pygame)
 import pygame  # noqa: E402
-import salon  # noqa: E402
 
 erreurs = []
 
@@ -151,6 +151,10 @@ verifier(app.cfg["ecran_retourne"] and app.toile is not app.ecran, "retournement
 capture("options-retourne")
 app.commande("ok")
 verifier(not app.cfg["ecran_retourne"], "retournement annulé")
+enregistre = json.loads((maison / ".config/salon/config.json").read_text())
+verifier("mpv" not in enregistre and enregistre["port_telecommande"] == port,
+         f"seuls les réglages personnels sont enregistrés : {enregistre}")
+verifier("numpy" not in sys.modules or sys.modules["numpy"] is None, "numpy n'est pas chargé")
 
 # Tactile : appui sur la tuile « Jeux »
 app.commande("accueil")
@@ -177,10 +181,15 @@ try:
     verifier(False, "action inconnue refusée")
 except urllib.error.HTTPError as e:
     verifier(e.code == 400, "action inconnue refusée")
+try:
+    urllib.request.urlopen(base + "/inconnu", timeout=3)
+    verifier(False, "adresse inconnue : 404")
+except urllib.error.HTTPError as e:
+    verifier(e.code == 404, "adresse inconnue : 404")
 etat = json.loads(urllib.request.urlopen(base + "/etat", timeout=3).read())
 verifier(etat == {"ecran": "Accueil", "lecture": None}, f"état : {etat}")
 
-app.serveur.shutdown()
+app.fermer_telecommande()
 pygame.quit()
 print("OK" if not erreurs else f"{len(erreurs)} échec(s)")
 sys.exit(1 if erreurs else 0)

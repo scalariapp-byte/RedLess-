@@ -16,15 +16,19 @@ import subprocess
 import sys
 import threading
 import time
-import urllib.request
 from glob import glob
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 # La manette doit rester lue quand mpv est devant (pause, volume, quitter).
 os.environ.setdefault("SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS", "1")
+# pygame charge d'office numpy, le son et d'autres modules dont Salon ne se sert pas :
+# les bloquer économise environ 18 Mo de mémoire (pygame les remplace par des modules vides).
+for _module in ("numpy", "pygame.mixer", "pygame.mixer_music", "pygame.sndarray", "pygame.surfarray",
+                "pygame.freetype", "pygame.ftfont", "pygame.midi", "pygame.camera", "pygame.scrap",
+                "pygame.fastevent"):
+    sys.modules.setdefault(_module, None)
 import pygame  # noqa: E402
 
 VERSION = "1.0"
@@ -54,22 +58,39 @@ DEFAUTS = {
     "roms": str(ACCUEIL_DIR / "ROMs"),
     "retroarch": "retroarch",
     "cores_dir": "",
-    "mpv": ["mpv", "--fs", "--hwdec=auto-safe", "--really-quiet"],
+    # Décodage par la puce graphique, petit tampon réseau (150 Mo par défaut dans mpv).
+    "mpv": ["mpv", "--fs", "--hwdec=auto-safe", "--really-quiet", "--ytdl=no",
+            "--demuxer-max-bytes=32MiB", "--demuxer-max-back-bytes=8MiB"],
     "port_telecommande": 8765,
     "ecran_retourne": False,
 }
+ANCIEN_MPV = ["mpv", "--fs", "--hwdec=auto-safe", "--really-quiet"]
 
-# dossier dans ~/ROMs, nom affiché, émulateurs RetroArch par ordre de préférence, extensions
+# Réglages de RetroArch pour un petit processeur, ajoutés par-dessus les siens à chaque lancement.
+RETROARCH_LEGER = """\
+video_threaded = "true"
+video_shader_enable = "false"
+video_smooth = "false"
+video_fullscreen = "true"
+menu_driver = "rgui"
+rewind_enable = "false"
+run_ahead_enabled = "false"
+audio_latency = "64"
+savestate_auto_save = "true"
+savestate_auto_load = "true"
+"""
+
+# dossier dans ~/ROMs, nom affiché, émulateurs RetroArch (les plus légers d'abord), extensions
 SYSTEMES = [
-    ("nes", "NES", ["nestopia_libretro", "fceumm_libretro", "mesen_libretro"], ".nes .fds .unf .zip .7z"),
+    ("nes", "NES", ["fceumm_libretro", "nestopia_libretro", "mesen_libretro"], ".nes .fds .unf .zip .7z"),
     ("snes", "Super Nintendo", ["snes9x_libretro", "snes9x2010_libretro", "bsnes_libretro"], ".sfc .smc .zip .7z"),
-    ("megadrive", "Mega Drive", ["genesis_plus_gx_libretro", "picodrive_libretro"], ".md .gen .smd .bin .zip .7z"),
-    ("mastersystem", "Master System", ["genesis_plus_gx_libretro", "picodrive_libretro"], ".sms .zip .7z"),
+    ("megadrive", "Mega Drive", ["picodrive_libretro", "genesis_plus_gx_libretro"], ".md .gen .smd .bin .zip .7z"),
+    ("mastersystem", "Master System", ["picodrive_libretro", "genesis_plus_gx_libretro"], ".sms .zip .7z"),
     ("gb", "Game Boy", ["gambatte_libretro", "sameboy_libretro", "mgba_libretro"], ".gb .zip .7z"),
     ("gbc", "Game Boy Color", ["gambatte_libretro", "sameboy_libretro", "mgba_libretro"], ".gbc .zip .7z"),
-    ("gba", "Game Boy Advance", ["mgba_libretro", "vba_next_libretro"], ".gba .zip .7z"),
+    ("gba", "Game Boy Advance", ["gpsp_libretro", "mgba_libretro", "vba_next_libretro"], ".gba .zip .7z"),
     ("pcengine", "PC Engine", ["mednafen_pce_fast_libretro"], ".pce .cue .chd .zip"),
-    ("psx", "PlayStation", ["swanstation_libretro", "pcsx_rearmed_libretro", "mednafen_psx_libretro"], ".cue .chd .pbp .m3u"),
+    ("psx", "PlayStation", ["pcsx_rearmed_libretro", "swanstation_libretro", "mednafen_psx_libretro"], ".cue .chd .pbp .m3u"),
     ("n64", "Nintendo 64", ["mupen64plus_next_libretro", "parallel_n64_libretro"], ".n64 .z64 .v64 .zip"),
 ]
 
@@ -101,16 +122,20 @@ def charger_config():
     try:
         cfg.update(json.loads(CONFIG_FICHIER.read_text()))
     except FileNotFoundError:
-        sauver_config(cfg)
+        pass
     except (OSError, ValueError) as e:
         print(f"salon : {CONFIG_FICHIER} illisible ({e}), réglages par défaut", file=sys.stderr)
+    if cfg.get("mpv") == ANCIEN_MPV:  # fichier écrit par la 1re version : on reprend les nouveaux réglages
+        cfg["mpv"] = DEFAUTS["mpv"]
     return cfg
 
 
 def sauver_config(cfg):
+    """N'écrit que ce qui diffère des valeurs par défaut, pour profiter des améliorations futures."""
+    perso = {k: v for k, v in cfg.items() if DEFAUTS.get(k) != v}
     try:
         CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-        CONFIG_FICHIER.write_text(json.dumps(cfg, indent=2, ensure_ascii=False) + "\n")
+        CONFIG_FICHIER.write_text(json.dumps(perso, indent=2, ensure_ascii=False) + "\n")
     except OSError as e:
         print(f"salon : impossible d'écrire {CONFIG_FICHIER} ({e})", file=sys.stderr)
 
@@ -625,7 +650,12 @@ class App:
     def police(self, taille, gras=False):
         cle = (taille, gras)
         if cle not in self._polices:
-            self._polices[cle] = pygame.font.SysFont("dejavusans,notosans,ubuntu,freesans", taille, bold=gras)
+            # Chemin direct : évite que pygame lance fc-list (lent au premier appel sur un petit PC).
+            fichier = f"/usr/share/fonts/truetype/dejavu/DejaVuSans{'-Bold' if gras else ''}.ttf"
+            if os.path.exists(fichier):
+                self._polices[cle] = pygame.font.Font(fichier, taille)
+            else:
+                self._polices[cle] = pygame.font.SysFont("dejavusans,notosans,ubuntu,freesans", taille, bold=gras)
         return self._polices[cle]
 
     @staticmethod
@@ -745,6 +775,7 @@ class App:
             texte = ""
             try:
                 if source.startswith(("http://", "https://")):
+                    import urllib.request  # chargé seulement ici : 6 Mo évités tant qu'on ne regarde pas la TV
                     try:
                         with urllib.request.urlopen(source, timeout=15) as r:
                             texte = r.read().decode("utf-8", "replace")
@@ -842,7 +873,15 @@ class App:
         if not core:
             self.notifier(f"Aucun émulateur {nom} : installe « {cores[0].replace('_libretro', '')} » dans RetroArch.")
             return
-        self.lancer(cmd + ["-f", "-L", str(core), rom], "retroarch")
+        options = []
+        try:
+            leger = CONFIG_DIR / "retroarch-leger.cfg"
+            CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+            leger.write_text(RETROARCH_LEGER)
+            options = [f"--appendconfig={leger}"]
+        except OSError:
+            pass
+        self.lancer(cmd + options + ["-f", "-L", str(core), rom], "retroarch")
 
     # Système et options
     def ouvrir_systeme(self):
@@ -1100,58 +1139,75 @@ class App:
     # ------------------------------------------------ télécommande (téléphone)
 
     def demarrer_telecommande(self):
-        app = self
-
-        class Gestionnaire(BaseHTTPRequestHandler):
-            def do_GET(self):
-                if urlparse(self.path).path in ("/", "/index.html"):
-                    corps = PAGE_TELECOMMANDE.encode()
-                    self.send_response(200)
-                    self.send_header("Content-Type", "text/html; charset=utf-8")
-                elif urlparse(self.path).path == "/etat":
-                    corps = json.dumps({"ecran": app.pile[-1].titre or "Accueil",
-                                        "lecture": app.genre_enfant}).encode()
-                    self.send_response(200)
-                    self.send_header("Content-Type", "application/json")
-                else:
-                    corps = b"introuvable"
-                    self.send_response(404)
-                self.send_header("Content-Length", str(len(corps)))
-                self.send_header("Cache-Control", "no-store")
-                self.end_headers()
-                self.wfile.write(corps)
-
-            def do_POST(self):
-                requete = urlparse(self.path)
-                action = parse_qs(requete.query).get("a", [""])[0]
-                if requete.path == "/action" and action in ACTIONS:
-                    pygame.event.post(pygame.event.Event(EV_TELE, action=action))
-                    self.send_response(204)
-                else:
-                    self.send_response(400)
-                self.send_header("Content-Length", "0")
-                self.end_headers()
-
-            def log_message(self, *args):
-                pass
-
+        # Mini-serveur fait main : le module http.server de Python coûterait 5 Mo de plus.
         try:
-            self.serveur = ThreadingHTTPServer(("0.0.0.0", self.port), Gestionnaire)
-            self.serveur.daemon_threads = True
-            threading.Thread(target=self.serveur.serve_forever, daemon=True).start()
+            self.serveur = socket.create_server(("0.0.0.0", self.port))
         except OSError as e:
             print(f"salon : télécommande indisponible sur le port {self.port} ({e.strerror})", file=sys.stderr)
+            self.serveur = None
+            return
+        threading.Thread(target=self.servir, daemon=True).start()
+
+    def servir(self):
+        while True:
+            try:
+                client, _ = self.serveur.accept()
+            except OSError:
+                return  # serveur fermé
+            with client:
+                try:
+                    client.settimeout(2)
+                    requete = b""
+                    while b"\r\n\r\n" not in requete and len(requete) < 8192:
+                        morceau = client.recv(2048)
+                        if not morceau:
+                            break
+                        requete += morceau
+                    methode, chemin = requete.split(b"\r\n", 1)[0].decode("latin-1").split()[:2]
+                    statut, genre, corps = self.repondre(methode, chemin)
+                    client.sendall(
+                        (f"HTTP/1.1 {statut}\r\nContent-Type: {genre}\r\nContent-Length: {len(corps)}\r\n"
+                         "Cache-Control: no-store\r\nConnection: close\r\n\r\n").encode() + corps)
+                except (OSError, ValueError):
+                    pass
+
+    def repondre(self, methode, chemin):
+        url = urlparse(chemin)
+        if methode == "GET" and url.path in ("/", "/index.html"):
+            return "200 OK", "text/html; charset=utf-8", PAGE_TELECOMMANDE.encode()
+        if methode == "GET" and url.path == "/etat":
+            etat = {"ecran": self.pile[-1].titre or "Accueil", "lecture": self.genre_enfant}
+            return "200 OK", "application/json", json.dumps(etat).encode()
+        if methode == "POST" and url.path == "/action":
+            action = parse_qs(url.query).get("a", [""])[0]
+            if action in ACTIONS:
+                pygame.event.post(pygame.event.Event(EV_TELE, action=action))
+                return "204 No Content", "text/plain", b""
+            return "400 Bad Request", "text/plain", b"action inconnue"
+        return "404 Not Found", "text/plain", b"introuvable"
+
+    def fermer_telecommande(self):
+        if self.serveur:
+            try:
+                self.serveur.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+            self.serveur.close()
             self.serveur = None
 
     # ------------------------------------------------ boucle
 
     def boucle(self):
+        # Pas de pygame.event.wait : dès qu'une manette est branchée, SDL y vérifie les événements
+        # toutes les millisecondes (11 fois plus de processeur, mesuré). On dort entre deux tours :
+        # 16 ms juste après une action (fluide), 50 ms au repos, 100 ms pendant un film ou un jeu.
+        derniere_action = 0.0
         while self.actif:
-            delai = 40 if self.dir_tenue else 1000
-            evenements = [pygame.event.wait(delai)] + pygame.event.get()
+            evenements = pygame.event.get()
             for e in evenements:
-                if e.type != pygame.NOEVENT:
-                    self.traiter(e)
+                self.traiter(e)
+            if evenements:
+                derniere_action = time.time()
             self.repeter()
             if self.enfant and self.enfant.poll() is not None:
                 self.fin_enfant()
@@ -1168,9 +1224,14 @@ class App:
             if self.sale and not self.enfant:
                 self.sale = False
                 self.dessiner()
+            if self.enfant:
+                time.sleep(0.1)
+            elif self.dir_tenue or time.time() - derniere_action < 2:
+                time.sleep(0.016)
+            else:
+                time.sleep(0.05)
         self.arreter_enfant()
-        if self.serveur:
-            self.serveur.shutdown()
+        self.fermer_telecommande()
         pygame.quit()
 
 

@@ -24,6 +24,8 @@ utilisateur="$(id -un)"
 echo "== 1/4 Paquets"
 sudo apt-get update -qq
 sudo apt-get install -y python3-pygame mpv x11-xserver-utils
+# Décodage vidéo par la puce graphique (Intel) : indispensable pour la 1080p sur un Celeron.
+sudo apt-get install -y -qq i965-va-driver intel-media-va-driver >/dev/null 2>&1 || true
 if ! sudo apt-get install -y retroarch; then
   echo "   RetroArch absent d'apt : installe-le avec « flatpak install flathub org.libretro.RetroArch »."
 fi
@@ -38,8 +40,12 @@ for core in nestopia snes9x genesisplusgx gambatte mgba beetle-psx beetle-pce-fa
 done
 
 echo "== 2/4 Programme"
-sudo install -Dm755 "$ici/salon.py" /opt/salon/salon.py
-sudo ln -sf /opt/salon/salon.py /usr/local/bin/salon
+sudo install -Dm644 "$ici/salon.py" /opt/salon/salon.py
+sudo python3 -m compileall -q /opt/salon   # version précompilée : démarrage plus rapide
+sudo rm -f /usr/local/bin/salon
+printf '#!/bin/sh\nexec python3 -c "import sys; sys.path.insert(0, \\"/opt/salon\\"); import salon; sys.exit(salon.main())" "$@"\n' \
+  | sudo tee /usr/local/bin/salon >/dev/null
+sudo chmod 755 /usr/local/bin/salon
 sudo install -Dm755 "$ici/salon-session" /usr/local/bin/salon-session
 install -Dm644 "$ici/salon.desktop" "$HOME/.local/share/applications/salon.desktop"
 
@@ -75,6 +81,7 @@ if [ "$auto" = 1 ]; then
 fi
 
 echo "== 4/4 Terminé"
+echo "   Pour alléger aussi Ubuntu (mémoire compressée, services inutiles) : bash $ici/optimiser.sh"
 ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
 echo "   Lancer : « salon » dans le menu des applications (ou la commande salon)."
 [ "$session" = 1 ] && echo "   Sans bureau : déconnecte-toi, clique sur ton nom, puis sur ⚙ en bas à droite → « Salon »."
