@@ -1,0 +1,7 @@
+#!/bin/sh
+# Session « Salon » : l'interface seule, sans le bureau Ubuntu (beaucoup moins de mémoire utilisée).
+xset s off -dpms s noblank 2>/dev/null
+for essai in 1 2 3; do
+  salon && exit 0   # « Quitter Salon » : retour à l'écran de connexion
+  sleep 2           # plantage : on relance, au plus 3 fois
+done
