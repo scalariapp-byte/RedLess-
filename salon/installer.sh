@@ -26,19 +26,43 @@ utilisateur="$(id -un)"
 
 echo "== 1/4 Paquets"
 sudo apt-get update -qq
-sudo apt-get install -y python3-pygame x11-xserver-utils fonts-inter xdotool
+sudo apt-get install -y python3-pygame x11-xserver-utils fonts-inter xdotool wget
+echo "== Émulateurs"
+cores_dir="$HOME/.config/retroarch/cores"
 if ! sudo apt-get install -y retroarch; then
-  echo "   RetroArch absent d'apt : installe-le avec « flatpak install flathub org.libretro.RetroArch »."
+  echo "   RetroArch absent d'apt : installation par Flatpak"
+  sudo apt-get install -y flatpak \
+    && sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo \
+    && sudo flatpak install -y --noninteractive flathub org.libretro.RetroArch \
+    || echo "   Échec de l'installation de RetroArch : les jeux ne pourront pas se lancer."
+  cores_dir="$HOME/.var/app/org.libretro.RetroArch/config/retroarch/cores"
 fi
-# Émulateurs (« cores ») packagés par Ubuntu. Ceux qui manquent s'installent depuis RetroArch :
-# Menu principal → Mise à jour en ligne → Télécharger des cœurs.
-for core in nestopia snes9x genesisplusgx gambatte mgba beetle-psx beetle-pce-fast; do
-  if sudo apt-get install -y -qq "libretro-$core" >/dev/null 2>&1; then
-    echo "   émulateur $core : installé"
-  else
-    echo "   émulateur $core : pas dans apt, à prendre dans RetroArch"
+# Un émulateur (« cœur ») par console, le plus léger d'abord, pris sur le serveur officiel de RetroArch
+# (le même que sa « Mise à jour en ligne »). Relancer l'installateur les met à jour.
+mkdir -p "$cores_dir"
+if [ "$(uname -m)" = x86_64 ]; then
+  base=https://buildbot.libretro.com/nightly/linux/x86_64/latest
+  manquants=""
+  for core in fceumm snes9x picodrive gambatte gpsp mgba mednafen_pce_fast pcsx_rearmed mupen64plus_next; do
+    zip="$(mktemp)"
+    if wget -q --timeout=60 -O "$zip" "$base/${core}_libretro.so.zip" \
+       && python3 -c 'import sys, zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])' "$zip" "$cores_dir" \
+       && [ -s "$cores_dir/${core}_libretro.so" ]; then
+      echo "   $core : installé"
+    else
+      echo "   $core : échec du téléchargement"
+      manquants="$manquants $core"
+    fi
+    rm -f "$zip"
+  done
+  if [ -n "$manquants" ]; then
+    echo "   Manquants :$manquants. Relance l'installateur plus tard, ou prends-les dans"
+    echo "   RetroArch → Mise à jour en ligne → Télécharger des cœurs."
   fi
-done
+else
+  echo "   Processeur $(uname -m) : prends les émulateurs dans RetroArch → Mise à jour en ligne."
+fi
+echo "   Jeux PS1 : copie le BIOS de ta console (ex. scph5502.bin) dans ~/.config/retroarch/system/"
 
 if [ "$netflix" = 1 ] && ! command -v google-chrome-stable >/dev/null; then
   # Netflix exige un navigateur qui lit les vidéos protégées : Chromium d'Ubuntu ne le fait pas.

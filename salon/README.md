@@ -18,10 +18,12 @@ bash ~/RedLess-/salon/optimiser.sh
 
 | Option de `installer.sh` | Effet |
 |---|---|
-| *(aucune)* | ajoute l'appli « Salon » au menu d'Ubuntu |
+| *(aucune)* | installe Salon, RetroArch et un émulateur par console, et ajoute l'appli « Salon » au menu d'Ubuntu |
 | `--session` | ajoute la session « Salon » (sans bureau) à l'écran de connexion |
 | `--demarrage-auto` | le PC s'allume directement sur Salon, sans mot de passe |
 | `--netflix` | installe Google Chrome pour la tuile Netflix |
+
+Émulateurs installés d'office (serveur officiel de RetroArch, mis à jour à chaque nouvelle installation) : FCEUmm (NES), Snes9x (Super Nintendo), PicoDrive (Mega Drive, Master System), Gambatte (Game Boy), gpSP et mGBA (GBA), Mednafen PCE Fast (PC Engine), PCSX ReARMed (PS1), Mupen64Plus-Next (N64). Seul le BIOS de la PS1 reste à copier à la main, depuis ta console, dans `~/.config/retroarch/system/`.
 
 Pour annuler le démarrage automatique : `sudo cp /etc/gdm3/custom.conf.avant-salon /etc/gdm3/custom.conf`.
 
