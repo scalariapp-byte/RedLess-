@@ -4,7 +4,7 @@
   const LV = NT.levels;
   const { Music, MenuMusic, Synth, haptic } = NT;
   const fx = NT.fx;
-  const VERSION = "3.23";
+  const VERSION = "3.24";
 
   // ---------- storage (may be unavailable) ----------
   const KEY = "ntplr-save-v1";
@@ -132,7 +132,7 @@
     try { showUpdateBar(); } catch {} // hidden during a run
     const sc = screens[id];
     ({ menu: renderMenu, shop: renderShop, ranking: renderBoard, missions: renderMissions,
-       settings: renderSettings, login: renderLogin, duel: renderDuel, calib: renderCalib, "modes-screen": renderModes, "rank-screen": renderRanks, levels: renderLevels })[id]?.();
+       settings: renderSettings, duel: renderDuel, calib: renderCalib, "modes-screen": renderModes, "rank-screen": renderRanks, levels: renderLevels })[id]?.();
     fx.initFrames(sc); fx.redrawFrames(sc);
     if (!reduceMotion) {
       sc.classList.remove("enter"); void sc.offsetWidth; sc.classList.add("enter");
@@ -1611,7 +1611,7 @@
     acct = null; $("#acct-form").hidden = true;
   }
   // Log out: the progress is saved online first, then this phone goes back to a fresh start
-  // (device settings kept) and shows the login screen. Offline, nothing happens: nothing is lost.
+  // (device settings kept) and reopens on the menu. Offline, nothing happens: nothing is lost.
   let logoutArmed = false, logoutTimer = 0;
   $("#btn-logout").onclick = async () => {
     if (!logoutArmed) {
@@ -1627,7 +1627,7 @@
       clearTimeout(pushTimer); pushTimer = 0;
       NT.online.logout();
       const device = { tutorialDone: true }; LOCAL_ONLY.forEach((k) => (device[k] = S[k]));
-      try { localStorage.setItem(KEY, JSON.stringify(device)); localStorage.removeItem(PUSHED); localStorage.removeItem(GUEST_AT); } catch {}
+      try { localStorage.setItem(KEY, JSON.stringify(device)); localStorage.removeItem(PUSHED); } catch {}
       toast("Déconnecté");
       setTimeout(() => location.reload(), 700);
     } finally { $("#btn-logout").disabled = false; }
@@ -1683,87 +1683,6 @@
     } finally { acctBusy = false; $("#btn-acct-go").disabled = false; }
   });
 
-  // ---------- login at startup: shown while the player has no account (e-mail) ----------
-  // Create: pseudo + e-mail, a code ties this phone's anonymous account to the address.
-  // Existing account: e-mail + code bring its online save back. Guest: plays on the anonymous account.
-  const NAME_RE = /^[A-Za-z0-9À-ÖØ-öø-ÿ _.-]{2,14}$/;
-  // Without an account: at first launch, then again once a week at most after « Jouer sans compte ».
-  const GUEST_AT = "redless-guest-at", GUEST_EVERY = 7 * 86400000;
-  const guestAt = () => { try { return +localStorage.getItem(GUEST_AT) || 0; } catch { return 0; } };
-  const needsLogin = () => NT.online.enabled && !NT.online.email() && Date.now() - guestAt() > GUEST_EVERY;
-  let login = { mode: "create", step: "email", email: "" };
-  function renderLogin() {
-    const { mode, step } = login, code = step === "code";
-    $("#login-name-row").hidden = mode !== "create" || code;
-    $("#login-email-row").hidden = code;
-    $("#login-code-row").hidden = !code;
-    if (!$("#login-name").value) $("#login-name").value = S.name || "";
-    $("#btn-login-go").textContent = code ? "Valider" : "Recevoir mon code";
-    $("#btn-login-switch").textContent = code ? "Changer d'adresse" : mode === "create" ? "J'ai déjà un compte" : "Créer un compte";
-    $("#login-help").textContent = code
-      ? `Code envoyé à ${login.email}. Regarde aussi dans les spams. Il est valable 1 heure.`
-      : mode === "create"
-        ? "Crée ton compte : choisis ton pseudo et ton adresse e-mail, tu recevras un code."
-        : "Connecte-toi avec l'adresse de ton compte. La progression de ce téléphone sera remplacée par celle du compte.";
-  }
-  function setLogin(mode, step, email = "") {
-    login = { mode, step, email };
-    $("#login-code").value = "";
-    renderLogin();
-    fx.redrawFrames(screens.login);
-  }
-  function loginName() {
-    const name = $("#login-name").value.trim().slice(0, 14);
-    if (!NAME_RE.test(name)) { toast("Pseudo : 2 à 14 lettres, chiffres, espace, . _ -"); return null; }
-    return name;
-  }
-  async function keepName(name) {
-    const changed = name !== S.name;
-    S.name = name; save();
-    if (changed) await NT.online.rename(name).catch(() => {}); // checked again with the first score
-  }
-  $("#btn-login-switch").onclick = () => setLogin(login.step === "code" ? login.mode : login.mode === "create" ? "login" : "create", "email");
-  $("#btn-login-guest").onclick = () => {
-    const name = $("#login-name").value.trim().slice(0, 14);
-    if (name && NAME_RE.test(name) && name !== S.name) keepName(name);
-    try { localStorage.setItem(GUEST_AT, String(Date.now())); } catch {}
-    show("menu");
-  };
-  let loginBusy = false;
-  $("#login-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    if (loginBusy) return;
-    loginBusy = true; $("#btn-login-go").disabled = true;
-    try {
-      if (login.step === "email") {
-        const name = login.mode === "create" ? loginName() : "";
-        if (name === null) return;
-        if (name && !(await NT.online.nameFree(name))) return toast("Ce pseudo est déjà pris, choisis-en un autre");
-        const mail = $("#login-email").value.trim().toLowerCase();
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) return toast("Adresse e-mail invalide");
-        if (login.mode === "create") await NT.online.linkEmail(mail); else await NT.online.sendLogin(mail);
-        setLogin(login.mode, "code", mail);
-        $("#login-code").focus();
-        return;
-      }
-      const code = $("#login-code").value.replace(/\D/g, "");
-      if (code.length < 6) return toast("Le code fait au moins 6 chiffres");
-      if (login.mode === "create") {
-        await NT.online.confirmLink(login.email, code);
-        await keepName($("#login-name").value.trim().slice(0, 14));
-        await pushNow();
-        toast("Compte créé");
-        show("menu");
-      } else {
-        await NT.online.confirmLogin(login.email, code);
-        const found = await restoreFromCloud();
-        toast(found ? "Connecté" : "Connecté (pas encore de sauvegarde en ligne)");
-        if (found) setTimeout(() => location.reload(), 900); else show("menu");
-      }
-    } catch (err) {
-      toast(err.offline ? "Pas de connexion" : err.message);
-    } finally { loginBusy = false; $("#btn-login-go").disabled = false; }
-  });
   $("#name-set-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const name = $("#set-name").value.trim().slice(0, 14);
@@ -1791,7 +1710,7 @@
     }
     clearTimeout(pushTimer);
     NT.online.logout(); // the protected account keeps its online save: « Retrouver » brings it back
-    try { localStorage.removeItem(KEY); localStorage.removeItem(GUEST_AT); } catch {}
+    try { localStorage.removeItem(KEY); } catch {}
     location.reload();
   };
 
@@ -2040,7 +1959,7 @@
       return true;
     }
     if (current === "tuto") { finishTutorial(); return true; }
-    if (current === "menu" || current === "login") return false;
+    if (current === "menu") return false;
     show(BACK_TO[current] || "menu"); return true;
   };
   window.__debug = () => ({ music: Music.playing, rate: Music.el && Music.el.playbackRate, bpm: G && G.bpm, bpmNow: G && G.bpmNow, cells: cells.length, tiles: G && [...G.tiles.values()].map((t) => t.kind), level: G && G.level, target: G && G.target, boss: !!(G && G.boss), score: G && G.score, spawned: G && G.spawnLog.join(","),
@@ -2166,5 +2085,5 @@
   setGrid(...DEFAULT_GRID, false);
   fx.sizeCanvases();
   ensureMissions();
-  show(needsLogin() ? "login" : "menu");
+  show("menu");
 })();
